@@ -29,7 +29,10 @@ return [
     // Endpoints (v2). Kept here so QA/prod swaps are a config change.
     'endpoints' => [
         'auth'        => env('SMARTKER_AUTH_URL', 'https://v2-smartker-api.capturebi.com/api/auth/authenticate-with-keys'),
+        // Comprobación web-form.
         'complemento' => env('SMARTKER_COMPLEMENTO_URL', 'https://v2-smartker-api.capturebi.com/api/web-form/file/9c8fde04-159c-4e58-b6b6-c14bf443c15d/b9abee88-1b21-4450-9695-97bf090bdf0a/submit'),
+        // Anticipo web-form (the "upload" form).
+        'anticipo'    => env('SMARTKER_ANTICIPO_URL', 'https://v2-smartker-api.capturebi.com/api/web-form/file/1d326fc2-da9c-4457-b749-143d7502b2fb/9a1a4823-00f4-4c39-9a28-a24865343e88/submit'),
     ],
 
     /*
@@ -64,6 +67,11 @@ return [
 
         // Whole gastos table as one JSON attribute (metadata only).
         'tabla_gastos' => 99,
+
+        // Anticipo-only field: "Monto de la solicitud".
+        'anticipo' => [
+            'monto_solicitud' => 13,
+        ],
 
         // File attributes, one pair per con-factura gasto.
         'files' => [

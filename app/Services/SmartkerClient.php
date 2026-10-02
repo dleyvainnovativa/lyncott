@@ -54,10 +54,21 @@ class SmartkerClient
         return $data['token'];
     }
 
-    /** POST the complemento attributes. Returns the raw response body. */
+    /** POST the comprobación (complemento) attributes. */
     public static function complemento(array $attributes): ?string
     {
-        $url   = config('smartker.endpoints.complemento');
+        return self::submit($attributes, config('smartker.endpoints.complemento'));
+    }
+
+    /** POST the anticipo attributes. */
+    public static function anticipo(array $attributes): ?string
+    {
+        return self::submit($attributes, config('smartker.endpoints.anticipo'));
+    }
+
+    /** POST attributes to a web-form submit URL. Returns the raw response body. */
+    private static function submit(array $attributes, string $url): ?string
+    {
         $token = self::authenticate();
 
         $payload = json_encode(['attributes' => $attributes, 'files' => []]);

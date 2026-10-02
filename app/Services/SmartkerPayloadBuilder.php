@@ -94,6 +94,44 @@ class SmartkerPayloadBuilder
         ];
     }
 
+    /**
+     * Anticipo payload: shared attributes + "Monto de la solicitud".
+     * No gastos table, no files.
+     *
+     * @return array{attributes: array, file_count: int}
+     */
+    public static function buildAnticipo(Comprobacion $c): array
+    {
+        $fields = config('smartker.fields');
+        $attributes = [];
+
+        $shared = [
+            'numero_empleado'    => $c->numero_empleado,
+            'nombre_empleado'    => $c->nombre_empleado,
+            'fecha_solicitud'    => Carbon::now('America/Mexico_City')->toDateString(),
+            'departamento'       => $c->departamento,
+            'centro_costos'      => $c->centro_costos,
+            'clabe'              => $c->clabe,
+            'sucursal_cedis'     => $c->sucursal_cedis,
+            'banco'              => $c->banco,
+            'tipo_gasto'         => $c->tipo_gasto,
+            'justificacion'      => $c->justificacion,
+            'monto_comprobacion' => '',               // n/a for anticipo
+            'folio_anticipo'     => '',
+        ];
+        foreach ($fields['shared'] as $name => $fieldId) {
+            $attributes[] = self::attr($fieldId, $shared[$name] ?? '');
+        }
+
+        // Monto de la solicitud.
+        $attributes[] = self::attr(
+            $fields['anticipo']['monto_solicitud'],
+            number_format((float) $c->monto_anticipo, 2, '.', '')
+        );
+
+        return ['attributes' => $attributes, 'file_count' => 0];
+    }
+
     /** Replace base64 data-URI values with a marker (for storage + logs). */
     public static function sanitize(array $attributes): array
     {

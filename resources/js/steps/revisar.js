@@ -7,7 +7,7 @@
    ========================================================================== */
 
 export function initRevisar(Lx) {
-  const panel = document.querySelector('[data-step="3"]');
+  const panel = document.querySelector('[data-step="4"]');
   if (!panel) return;
 
   const q = (s) => panel.querySelector(s);
@@ -41,6 +41,15 @@ export function initRevisar(Lx) {
     setRv('tCf', money(cf));
     setRv('tSf', money(sf));
     setRv('tTot', money(cf + sf));
+    setRv('tAnt', money(v.monto_anticipo || 0));
+  }
+
+  // Toggle sections by flow: anticipo = amount only (no gastos totals, no PDF).
+  function applyFlow(state) {
+    const anticipo = state.flujo === 'anticipo';
+    panel.querySelector('#rvAnticipo').hidden = !anticipo;
+    panel.querySelector('#rvTotales').hidden = anticipo;
+    panel.querySelector('#rvPdfCard').hidden = anticipo;
   }
 
   // Strip base64 before asking for the preview (keeps the request light).
@@ -77,10 +86,11 @@ export function initRevisar(Lx) {
     }
   }
 
-  Lx.Wizard.registerStep(3, {
+  Lx.Wizard.registerStep(4, {
     onEnter(state) {
       fillSummary(state);
-      loadPdf(state);
+      applyFlow(state);
+      if (state.flujo !== 'anticipo') loadPdf(state);
     },
     validate() {
       if (!q('#terminos').checked) {
@@ -96,14 +106,17 @@ export function initRevisar(Lx) {
     try {
       const res = await Lx.http.post(window.LX_ROUTES.comprobacionEnviar, {
         terminos: true,
+        flujo: state.flujo,
         solicitante: state.solicitante,
         viaje: state.viaje,
-        gastos: state.gastos,
+        gastos: state.flujo === 'anticipo' ? [] : state.gastos,
       });
 
+      const esAnticipo = state.flujo === 'anticipo';
       setEx('message', res.message || '');
       setEx('folio', res.folio || '—');
-      setEx('total', money(res.resumen?.total || 0));
+      setEx('total', money(esAnticipo ? (res.resumen?.anticipo || 0) : (res.resumen?.total || 0)));
+      panel.querySelector('[data-ex-label="total"]').textContent = esAnticipo ? 'Monto del anticipo' : 'Total comprobación';
       setEx('payload', `#${res.payload_id} · ${res.live ? (res.sent ? 'enviado' : 'no enviado') : 'modo demo (no enviado)'}`);
       setEx('files', `${res.file_count} adjunto(s)`);
 

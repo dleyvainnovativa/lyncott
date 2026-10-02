@@ -22,18 +22,22 @@
     <div id="lxWizard">
         {{-- Each panel is a [data-step]; the wizard shows one at a time. --}}
         <section data-step="0">
-            @include('comprobacion.steps._solicitante')
+            @include('comprobacion.steps._flujo')
         </section>
 
         <section data-step="1" hidden>
-            @include('comprobacion.steps._viaje')
+            @include('comprobacion.steps._solicitante')
         </section>
 
         <section data-step="2" hidden>
-            @include('comprobacion.steps._gastos')
+            @include('comprobacion.steps._viaje')
         </section>
 
         <section data-step="3" hidden>
+            @include('comprobacion.steps._gastos')
+        </section>
+
+        <section data-step="4" hidden>
             @include('comprobacion.steps._revisar')
         </section>
     </div>

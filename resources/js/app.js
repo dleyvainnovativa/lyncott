@@ -22,6 +22,7 @@ import * as bootstrap from 'bootstrap';
 import '../css/theme.css';
 
 import { Wizard } from './wizard.js';
+import { initFlujo } from './steps/flujo.js';
 import { initSolicitante } from './steps/solicitante.js';
 import { initViaje } from './steps/viaje.js';
 import { initGastos } from './steps/gastos.js';
@@ -235,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Boot the wizard if its shell is present on the page.
   const shell = document.getElementById('lxWizard');
   if (shell) {
+    initFlujo(Lx);         // step 0 registers its hooks
     initSolicitante(Lx);   // step 1 registers its hooks
     initViaje(Lx);         // step 2 registers its hooks
     initGastos(Lx);        // step 3 registers its hooks

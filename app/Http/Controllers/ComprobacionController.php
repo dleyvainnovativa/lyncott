@@ -64,18 +64,12 @@ class ComprobacionController extends Controller
     /** Phase 5 — render the Lyncott "DETALLE DE GASTOS" PDF for the review preview. */
     public function previewPdf(Request $request)
     {
-        $payload = $request->validate([
-            'solicitante'       => ['array'],
-            'viaje'             => ['array'],
-            'gastos'            => ['array'],
-            'gastos.*.tipo'     => ['nullable', 'string'],
-            'gastos.*.total'    => ['nullable', 'numeric'],
-        ]);
-
+        // Read the full input (NOT validate(), which returns only ruled keys and
+        // would strip fecha/rfc/compañía/categoría from each gasto row).
         $data = $this->buildPdfData(
-            $payload['solicitante'] ?? [],
-            $payload['viaje'] ?? [],
-            $payload['gastos'] ?? []
+            (array) $request->input('solicitante', []),
+            (array) $request->input('viaje', []),
+            (array) $request->input('gastos', [])
         );
 
         return Pdf::loadView('pdf.detalle', $data)
@@ -83,35 +77,44 @@ class ComprobacionController extends Controller
             ->stream('detalle-gastos.pdf');
     }
 
-    /** Phase 5 — persist the comprobación, build the Smartker payload, stub the send. */
+    /** Phase 5 — persist the comprobación/anticipo, build the Smartker payload, stub the send. */
     public function enviar(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'terminos'          => ['accepted'],
-            'solicitante'       => ['required', 'array'],
+        $request->validate([
+            'terminos' => ['accepted'],
+            'flujo'    => ['required', 'in:comprobacion,anticipo'],
             'solicitante.numero_empleado' => ['required', 'string'],
-            'viaje'             => ['required', 'array'],
-            'gastos'            => ['required', 'array', 'min:1'],
         ], [], ['terminos' => 'aceptación de términos']);
 
-        $sol    = $data['solicitante'];
-        $viaje  = $data['viaje'];
-        $gastos = $data['gastos'];
+        $flujo  = $request->input('flujo');
+        $sol    = (array) $request->input('solicitante', []);
+        $viaje  = (array) $request->input('viaje', []);
+        $gastos = (array) $request->input('gastos', []);
 
-        $result = DB::transaction(function () use ($sol, $viaje, $gastos) {
-            // Server-side totals (never trust the client).
+        if ($flujo === 'comprobacion' && count($gastos) < 1) {
+            return response()->json(['message' => 'Agrega al menos un gasto para comprobar.'], 422);
+        }
+        if ($flujo === 'anticipo' && ! ((float) ($viaje['monto_anticipo'] ?? 0) > 0)) {
+            return response()->json(['message' => 'Captura el monto del anticipo.'], 422);
+        }
+
+        $result = DB::transaction(function () use ($flujo, $sol, $viaje, $gastos) {
+            // Server-side totals (comprobación only; never trust the client).
             $totCf = $totSf = $iva = 0.0;
-            foreach ($gastos as $g) {
-                $total = (float) ($g['total'] ?? 0);
-                if (($g['tipo'] ?? 'sf') === 'cf') {
-                    $totCf += $total;
-                    $iva   += round($total - $total / 1.16, 2);
-                } else {
-                    $totSf += $total;
+            if ($flujo === 'comprobacion') {
+                foreach ($gastos as $g) {
+                    $total = (float) ($g['total'] ?? 0);
+                    if (($g['tipo'] ?? 'sf') === 'cf') {
+                        $totCf += $total;
+                        $iva   += round($total - $total / 1.16, 2);
+                    } else {
+                        $totSf += $total;
+                    }
                 }
             }
 
             $comprobacion = Comprobacion::create([
+                'tipo_solicitud'     => $flujo,
                 'numero_empleado'    => $sol['numero_empleado'] ?? '',
                 'nombre_empleado'    => $sol['nombre_completo'] ?? '',
                 'rfc'                => $sol['rfc'] ?? null,
@@ -141,55 +144,63 @@ class ComprobacionController extends Controller
                 'estatus'            => 'capturada',
             ]);
 
-            // Persist gastos + decode files to storage; keep base64 for payload.
-            $filesByGastoId = [];
-            $dir = 'comprobaciones/' . $comprobacion->id;
+            // Comprobación: persist gastos + decode files; Anticipo: no gastos.
+            $endpointName = $flujo === 'comprobacion' ? 'complemento' : 'anticipo';
 
-            foreach ($gastos as $g) {
-                $tipo  = ($g['tipo'] ?? 'sf') === 'cf' ? 'cf' : 'sf';
-                $total = (float) ($g['total'] ?? 0);
-                $gImporte = $tipo === 'cf' ? round($total / 1.16, 2) : $total;
-                $gIva     = $tipo === 'cf' ? round($total - $gImporte, 2) : 0.0;
+            if ($flujo === 'comprobacion') {
+                $filesByGastoId = [];
+                $dir = 'comprobaciones/' . $comprobacion->id;
 
-                $xmlPath = $this->saveDataUri($g['xmlB64'] ?? null, $dir, ($g['xmlName'] ?? 'factura') . '');
-                $pdfPath = $this->saveDataUri($g['pdfB64'] ?? null, $dir, ($g['pdfName'] ?? 'factura') . '');
+                foreach ($gastos as $g) {
+                    $tipo  = ($g['tipo'] ?? 'sf') === 'cf' ? 'cf' : 'sf';
+                    $total = (float) ($g['total'] ?? 0);
+                    $gImporte = $tipo === 'cf' ? round($total / 1.16, 2) : $total;
+                    $gIva     = $tipo === 'cf' ? round($total - $gImporte, 2) : 0.0;
 
-                $gasto = $comprobacion->gastos()->create([
-                    'tipo'          => $tipo,
-                    'fecha'         => $g['fecha'] ?? null,
-                    'categoria'     => $g['cat'] ?? null,
-                    'compania'      => $g['co'] ?? null,
-                    'rfc'           => $g['rfc'] ?? null,
-                    'uuid'          => $g['uuid'] ?? null,
-                    'importe'       => $gImporte,
-                    'iva'           => $gIva,
-                    'total'         => $total,
-                    'justificacion' => $g['justificacion'] ?? null,
-                    'xml_filename'  => $g['xmlName'] ?? null,
-                    'xml_path'      => $xmlPath,
-                    'pdf_filename'  => $g['pdfName'] ?? null,
-                    'pdf_path'      => $pdfPath,
-                ]);
+                    $xmlPath = $this->saveDataUri($g['xmlB64'] ?? null, $dir, ($g['xmlName'] ?? 'factura') . '');
+                    $pdfPath = $this->saveDataUri($g['pdfB64'] ?? null, $dir, ($g['pdfName'] ?? 'factura') . '');
 
-                $filesByGastoId[$gasto->id] = [
-                    'xml' => $g['xmlB64'] ?? null,
-                    'pdf' => $g['pdfB64'] ?? null,
-                ];
+                    $gasto = $comprobacion->gastos()->create([
+                        'tipo'          => $tipo,
+                        'fecha'         => $g['fecha'] ?? null,
+                        'categoria'     => $g['cat'] ?? null,
+                        'compania'      => $g['co'] ?? null,
+                        'rfc'           => $g['rfc'] ?? null,
+                        'uuid'          => $g['uuid'] ?? null,
+                        'importe'       => $gImporte,
+                        'iva'           => $gIva,
+                        'total'         => $total,
+                        'justificacion' => $g['justificacion'] ?? null,
+                        'xml_filename'  => $g['xmlName'] ?? null,
+                        'xml_path'      => $xmlPath,
+                        'pdf_filename'  => $g['pdfName'] ?? null,
+                        'pdf_path'      => $pdfPath,
+                    ]);
+
+                    $filesByGastoId[$gasto->id] = [
+                        'xml' => $g['xmlB64'] ?? null,
+                        'pdf' => $g['pdfB64'] ?? null,
+                    ];
+                }
+
+                $built = SmartkerPayloadBuilder::build($comprobacion, $comprobacion->gastos, $filesByGastoId);
+            } else {
+                $built = SmartkerPayloadBuilder::buildAnticipo($comprobacion);
             }
 
-            // Build the Smartker payload from the config field map.
-            $built      = SmartkerPayloadBuilder::build($comprobacion, $comprobacion->gastos, $filesByGastoId);
-            $sanitized  = SmartkerPayloadBuilder::sanitize($built['attributes']);
-            $live       = (bool) config('smartker.live');
-            $sent       = false;
-            $response   = null;
+            $sanitized = SmartkerPayloadBuilder::sanitize($built['attributes']);
+            $live      = (bool) config('smartker.live');
+            $sent      = false;
+            $response  = null;
 
             // Log mirrors the client's controller (base64 omitted).
-            Log::debug('Smartker complemento (' . ($live ? 'LIVE' : 'STUB') . ')', $sanitized);
+            Log::debug("Smartker {$endpointName} (" . ($live ? 'LIVE' : 'STUB') . ')', $sanitized);
 
             if ($live) {
                 try {
-                    $response = SmartkerClient::complemento($built['attributes']);
+                    $response = $flujo === 'comprobacion'
+                        ? SmartkerClient::complemento($built['attributes'])
+                        : SmartkerClient::anticipo($built['attributes']);
                     $sent = true;
                 } catch (\Throwable $e) {
                     $response = 'ERROR: ' . $e->getMessage();
@@ -198,7 +209,7 @@ class ComprobacionController extends Controller
             }
 
             $payloadRecord = $comprobacion->payloads()->create([
-                'endpoint'   => 'complemento',
+                'endpoint'   => $endpointName,
                 'live'       => $live,
                 'sent'       => $sent,
                 'file_count' => $built['file_count'],
@@ -224,11 +235,13 @@ class ComprobacionController extends Controller
             'folio'         => $c->folio(),
             'payload_id'    => $result['payloadRecord']->id,
             'file_count'    => $result['payloadRecord']->file_count,
+            'tipo_solicitud' => $c->tipo_solicitud,
             'resumen'       => [
                 'con_factura' => (float) $c->total_con_factura,
                 'sin_factura' => (float) $c->total_sin_factura,
                 'iva'         => (float) $c->iva_total,
                 'total'       => (float) $c->monto_comprobacion,
+                'anticipo'    => (float) $c->monto_anticipo,
             ],
             'message'       => $result['live']
                 ? ($result['sent'] ? 'Comprobación enviada a Smartker.' : 'Comprobación guardada; el envío a Smartker falló (ver logs).')

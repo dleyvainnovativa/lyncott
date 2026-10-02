@@ -138,7 +138,7 @@ h1, h2, h3 { text-wrap: balance; }
 }
 .lx-brand__logo { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -.02em; font-size: 1.22rem; }
 /* PNG logo rendered white on the red bar (brightness(0) -> black, invert(1) -> white). */
-.lx-brand__logo img { height: 30px; width: auto; display: block; filter: brightness(0) invert(1); }
+.lx-brand__logo img { height: 45px; width: auto; display: block; filter: brightness(0) invert(1); }
 .lx-brand__logo .lx-brand__fallback {
   width: 30px; height: 30px; border-radius: 7px; background: #fff; color: var(--lx-red);
   display: grid; place-items: center; font-weight: 900; font-size: 1.05rem;
@@ -168,6 +168,8 @@ h1, h2, h3 { text-wrap: balance; }
 .lx-steps li.is-done .lx-lbl { color: var(--lx-muted); }
 .lx-steps li.is-active .lx-dot { background: var(--lx-red); color: #fff; border-color: transparent; box-shadow: 0 0 0 4px var(--lx-red-ring); }
 .lx-steps li.is-active .lx-lbl { color: var(--lx-red-ink); }
+.lx-steps li.is-skipped { opacity: .38; }
+.lx-steps li.is-skipped .lx-lbl { text-decoration: line-through; }
 .lx-steps li::after { content: ""; position: absolute; top: 24px; left: calc(50% + 24px); right: calc(-50% + 24px); height: 1.5px; background: var(--lx-line); }
 .lx-steps li:last-child::after { display: none; }
 .lx-steps li.is-done::after { background: var(--lx-ok); }
@@ -302,6 +304,17 @@ h1, h2, h3 { text-wrap: balance; }
 .lx-seg { display: flex; gap: 6px; background: var(--lx-surface-2); border: 1px solid var(--lx-line); border-radius: var(--lx-r); padding: 4px; }
 .lx-seg button { flex: 1; border: 0; background: transparent; padding: 8px; border-radius: var(--lx-r-sm); font-weight: 600; font-size: .82rem; color: var(--lx-muted); cursor: pointer; }
 .lx-seg button.is-on { background: var(--lx-surface); color: var(--lx-red-ink); box-shadow: var(--lx-shadow); }
+
+/* ---------- Flow-select cards (step 0) ---------- */
+.lx-flow-card { width: 100%; text-align: left; background: var(--lx-surface); border: 1.5px solid var(--lx-line-strong); border-radius: var(--lx-r-lg); padding: 20px; cursor: pointer; transition: .16s; display: flex; gap: 14px; align-items: flex-start; height: 100%; }
+.lx-flow-card:hover { border-color: var(--lx-red); }
+.lx-flow-card.is-sel { border-color: var(--lx-red); box-shadow: 0 0 0 3px var(--lx-red-ring); background: var(--lx-red-weak); }
+.lx-flow-card .lx-flow-ico { width: 46px; height: 46px; border-radius: var(--lx-r); background: var(--lx-red-weak); color: var(--lx-red); display: grid; place-items: center; font-size: 1.3rem; flex: 0 0 auto; }
+.lx-flow-card.is-sel .lx-flow-ico { background: var(--lx-red); color: #fff; }
+.lx-flow-card .lx-flow-t { font-weight: 800; font-size: 1.02rem; letter-spacing: -.01em; }
+.lx-flow-card .lx-flow-d { color: var(--lx-muted); font-size: .85rem; margin-top: 3px; }
+.lx-flow-card .lx-flow-check { margin-left: auto; color: var(--lx-red); font-size: 1.1rem; opacity: 0; transition: .16s; }
+.lx-flow-card.is-sel .lx-flow-check { opacity: 1; }
 
 /* ---------- Helper note ---------- */
 .lx-note { font-size: .78rem; color: var(--lx-faint); margin-top: 14px; display: flex; gap: 7px; align-items: flex-start; }

@@ -1,31 +1,32 @@
 /* ==========================================================================
    Lyncott — wizard.js
-   The 4-step comprobación wizard state machine.
+   Multi-step wizard state machine with conditional (skippable) steps.
 
-   Responsibilities (Phase 1):
-     - show/hide step panels
-     - drive the stepper UI (done / active states)
-     - Anterior / Siguiente navigation
-     - hold a single central state object that survives step changes
-     - per-step validation hook (steps register their own validator)
-
-   Step bodies (Datos del Solicitante, Viaje, Gastos, Revisar) are filled in
-   their own phases. Each step may call:
-       Wizard.registerStep(index, { validate, onEnter, collect })
-   to plug behavior in without touching this file.
+   Steps register behavior without touching this file:
+       Wizard.registerStep(index, {
+         onEnter(state) {},        // when the step becomes visible
+         validate(state) {},       // falsy/throw blocks "Siguiente"
+         collect(state) {},        // push this step's data into state
+         skip(state) { return bool }, // when true, the step is skipped + dimmed
+       });
+   And the final handler:
+       Wizard.onSubmit = async (state) => { ... };
    ========================================================================== */
 
 export const Wizard = {
   shell: null,
   index: 0,
-  steps: [],          // DOM panels
-  hooks: {},          // { [index]: { validate, onEnter, collect } }
-  state: {            // central, survives navigation
+  steps: [],
+  stepperItems: [],
+  hooks: {},
+  state: {
+    flujo: 'comprobacion',   // 'comprobacion' | 'anticipo'
     solicitante: {},
     viaje: {},
     gastos: [],
     revisar: {},
   },
+  onSubmit: null,
 
   init(shell) {
     this.shell = shell;
@@ -36,9 +37,8 @@ export const Wizard = {
       b.addEventListener('click', () => this.next(b)));
     shell.querySelectorAll('[data-wizard-prev]').forEach((b) =>
       b.addEventListener('click', () => this.prev()));
-    // Allow clicking a completed step in the rail to jump back.
     this.stepperItems.forEach((li, i) =>
-      li.addEventListener('click', () => { if (i < this.index) this.go(i); }));
+      li.addEventListener('click', () => { if (i < this.index && this.enabled(i)) this.go(i); }));
 
     this.go(0);
   },
@@ -47,14 +47,22 @@ export const Wizard = {
     this.hooks[index] = { ...(this.hooks[index] || {}), ...hook };
   },
 
+  /** A step is enabled unless its hook's skip(state) says otherwise. */
+  enabled(i) {
+    const h = this.hooks[i];
+    return !(h && typeof h.skip === 'function' && h.skip(this.state));
+  },
+
   go(i) {
     if (i < 0 || i >= this.steps.length) return;
     this.index = i;
     this.steps.forEach((p, idx) => { p.hidden = idx !== i; });
     this.stepperItems.forEach((li, idx) => {
+      const enabled = this.enabled(idx);
+      li.classList.toggle('is-skipped', !enabled);
       li.classList.toggle('is-active', idx === i);
-      li.classList.toggle('is-done', idx < i);
-      li.style.cursor = idx < i ? 'pointer' : 'default';
+      li.classList.toggle('is-done', idx < i && enabled);
+      li.style.cursor = (idx < i && enabled) ? 'pointer' : 'default';
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     this.hooks[i]?.onEnter?.(this.state);
@@ -62,27 +70,28 @@ export const Wizard = {
 
   async next(btn) {
     const hook = this.hooks[this.index];
-    // Validate current step (sync or async). Falsy/throw blocks navigation.
     if (hook?.validate) {
       try {
         const ok = await (btn && window.Lx
           ? window.Lx.loading.button(btn, () => hook.validate(this.state))
           : hook.validate(this.state));
         if (!ok) return;
-      } catch {
-        return;
-      }
+      } catch { return; }
     }
-    // Let the step push its data into central state.
     hook?.collect?.(this.state);
 
-    if (this.index < this.steps.length - 1) this.go(this.index + 1);
+    let n = this.index + 1;
+    while (n < this.steps.length && !this.enabled(n)) n++;
+    if (n < this.steps.length) this.go(n);
     else this.submit(btn);
   },
 
-  prev() { if (this.index > 0) this.go(this.index - 1); },
+  prev() {
+    let p = this.index - 1;
+    while (p >= 0 && !this.enabled(p)) p--;
+    if (p >= 0) this.go(p);
+  },
 
-  /** Final submit — delegates to the handler a step registers via onSubmit. */
   async submit(btn) {
     if (typeof this.onSubmit !== 'function') {
       window.Lx?.toast?.('No hay un manejador de envío registrado.', 'error');
@@ -91,10 +100,6 @@ export const Wizard = {
     const run = () => this.onSubmit(this.state);
     try {
       await (btn && window.Lx ? window.Lx.loading.button(btn, run) : run());
-    } catch {
-      /* handler already surfaced the error */
-    }
+    } catch { /* handler surfaced the error */ }
   },
-
-  onSubmit: null,
 };

@@ -4,8 +4,7 @@
     <div>
         <h2>Datos del Solicitante</h2>
         <p>Ingresa tu número de empleado y RFC, luego da clic en
-            <i class="fa-solid fa-magnifying-glass"></i> Buscar.
-        </p>
+            <i class="fa-solid fa-magnifying-glass"></i> Buscar.</p>
     </div>
 </div>
 
@@ -17,7 +16,7 @@
                 <label class="form-label" for="numero_empleado">Número de empleado *</label>
                 <div class="lx-input-wrap">
                     <input type="text" class="form-control" id="numero_empleado"
-                        name="numero_empleado" placeholder="Ej. 082907558" inputmode="numeric">
+                           name="numero_empleado" placeholder="Ej. 082907558" inputmode="numeric">
                     <i class="fa-solid fa-circle-check lx-ok-check" aria-hidden="true"></i>
                 </div>
             </div>
@@ -25,7 +24,7 @@
                 <label class="form-label" for="rfc">RFC *</label>
                 <div class="lx-input-wrap">
                     <input type="text" class="form-control text-uppercase" id="rfc"
-                        name="rfc" maxlength="13" placeholder="Ej. PASK820101XYZ">
+                           name="rfc" maxlength="13" placeholder="Ej. PASK820101XYZ">
                     <i class="fa-solid fa-circle-check lx-ok-check" aria-hidden="true"></i>
                 </div>
             </div>
