@@ -6,149 +6,160 @@ use App\Models\Comprobacion;
 use Illuminate\Support\Carbon;
 
 /**
- * Builds the Smartker "complemento" attributes array for a comprobación:
+ * Builds the Smartker payload in its real shape:
  *
- *   - shared attributes (one per field, fieldIds from config)
- *   - the whole gastos table as ONE JSON attribute (metadata only)
- *   - per con-factura gasto: an XML + optional PDF file attribute
+ *   [ { "attributes": [ ...shared..., {fieldId:13, tableAttributes:[...]}, {fieldId:14} ],
+ *       "files": [ { fileName, extension, isPrincipal, base64 } ] } ]
  *
- * All fieldIds come from config/smartker.php (currently DUMMY numbers).
- * Nothing here sends anything — see SmartkerClient for the live call.
+ * - Shared attributes come from config('smartker.fields.shared') (ids 1-8).
+ * - The gastos table is config fieldId 13, with one set of cells per row
+ *   (row starts at 1): categoría(9), PDF(10,file), XML(11,file),
+ *   justificación(12), cantidad(15), importe(16).
+ * - Grand total is config fieldId 14.
+ * - The principal document goes in `files`.
+ *
+ * All ids live in config/smartker.php. Nothing here sends — see SmartkerClient.
  */
 class SmartkerPayloadBuilder
 {
     /**
-     * @param  iterable  $gastos          Gasto models (ordered).
-     * @param  array     $filesByGastoId  [gastoId => ['xml' => dataUri|null, 'pdf' => dataUri|null]]
-     * @return array{attributes: array, file_count: int}
+     * @param  iterable   $gastos          Gasto models (ordered).
+     * @param  array      $filesByGastoId  [gastoId => ['xml'=>dataUri|null, 'pdf'=>dataUri|null]]
+     * @param  array|null $principalFile   ['fileName'=>, 'extension'=>, 'base64'=>dataUri]
+     * @return array{payload: array, file_count: int}
      */
-    public static function build(Comprobacion $c, iterable $gastos, array $filesByGastoId = []): array
+    public static function build(Comprobacion $c, iterable $gastos, array $filesByGastoId = [], ?array $principalFile = null): array
     {
         $fields = config('smartker.fields');
-        $attributes = [];
+        $types  = config('smartker.field_types');
 
-        // 1) Shared attributes.
-        $shared = [
-            'numero_empleado'    => $c->numero_empleado,
-            'nombre_empleado'    => $c->nombre_empleado,
-            'fecha_solicitud'    => Carbon::now('America/Mexico_City')->toDateString(),
-            'departamento'       => $c->departamento,
-            'centro_costos'      => $c->centro_costos,
-            'clabe'              => $c->clabe,
-            'sucursal_cedis'     => $c->sucursal_cedis,
-            'banco'              => $c->banco,
-            'tipo_gasto'         => $c->tipo_gasto,
-            'justificacion'      => $c->justificacion,
-            'monto_comprobacion' => number_format((float) $c->monto_comprobacion, 2, '.', ''),
-            'folio_anticipo'     => $c->folio_anticipo,
-        ];
-        foreach ($fields['shared'] as $name => $fieldId) {
-            $attributes[] = self::attr($fieldId, $shared[$name] ?? '');
-        }
+        $attributes = self::sharedAttributes($c, $fields);
 
-        // 2) Gastos table as one JSON attribute + build file attributes in the same pass.
-        $rows = [];
-        $fileAttrs = [];
-        $base = $fields['files'];
-        $cfIndex = 0;
+        // Table (fieldId 13) — flatten every row's cells into one tableAttributes array.
+        $cols = $fields['tabla']['columns'];
+        $cells = [];
+        $fileCount = 0;
+        $totalImporte = 0.0;
+        $row = 0;
 
         foreach ($gastos as $g) {
-            $ref = null;
-            if ($g->tipo === 'cf') {
-                $ref = $cfIndex;
-                $files = $filesByGastoId[$g->id] ?? [];
-                if (! empty($files['xml'])) {
-                    $fileAttrs[] = self::attr($base['base_xml'] + $cfIndex * $base['stride'], $files['xml']);
-                }
-                if (! empty($files['pdf'])) {
-                    $fileAttrs[] = self::attr($base['base_pdf'] + $cfIndex * $base['stride'], $files['pdf']);
-                }
-                $cfIndex++;
-            }
+            $row++;
+            $files = $filesByGastoId[$g->id] ?? [];
+            $pdf = $files['pdf'] ?? '';
+            $xml = $files['xml'] ?? '';
+            if ($pdf) $fileCount++;
+            if ($xml) $fileCount++;
+            $totalImporte += (float) $g->total;
 
-            $rows[] = [
-                'ref'           => $ref,                       // links to its file pair (con-factura only)
-                'tipo'          => $g->tipo,
-                'categoria'     => $g->categoria,
-                'fecha'         => optional($g->fecha)->toDateString(),
-                'compania'      => $g->compania,
-                'rfc'           => $g->rfc,
-                'uuid'          => $g->uuid,
-                'importe'       => (float) $g->importe,
-                'iva'           => (float) $g->iva,
-                'total'         => (float) $g->total,
-                'justificacion' => $g->justificacion,
-            ];
+            $cells[] = self::cell($cols['categoria'], $row, $g->categoria ?? '', $types);
+            $cells[] = self::cell($cols['pdf'], $row, $pdf, $types);
+            $cells[] = self::cell($cols['xml'], $row, $xml, $types);
+            $cells[] = self::cell($cols['justificacion'], $row, $g->justificacion ?? '', $types);
+            $cells[] = self::cell($cols['cantidad'], $row, '1', $types);
+            $cells[] = self::cell($cols['importe'], $row, self::num($g->total), $types);
         }
 
-        $attributes[] = self::attr($fields['tabla_gastos'], json_encode($rows, JSON_UNESCAPED_UNICODE));
+        $attributes[] = [
+            'fieldId'         => $fields['tabla']['fieldId'],
+            'value'           => '',
+            'tableAttributes' => $cells,
+        ];
 
-        // 3) Append the file attributes after the table.
-        foreach ($fileAttrs as $fa) {
-            $attributes[] = $fa;
-        }
+        // Grand total (fieldId 14).
+        $attributes[] = self::attr($fields['monto_total'], self::num($totalImporte ?: $c->monto_comprobacion));
+
+        $files = [];
+        if ($principalFile) { $files[] = self::principal($principalFile); $fileCount++; }
 
         return [
-            'attributes' => $attributes,
-            'file_count' => count($fileAttrs),
+            'payload'    => [['attributes' => $attributes, 'files' => $files]],
+            'file_count' => $fileCount,
         ];
     }
 
     /**
-     * Anticipo payload: shared attributes + "Monto de la solicitud".
-     * No gastos table, no files.
+     * Anticipo payload: shared attributes + grand total (monto del anticipo).
+     * No gastos table.
      *
-     * @return array{attributes: array, file_count: int}
+     * @return array{payload: array, file_count: int}
      */
-    public static function buildAnticipo(Comprobacion $c): array
+    public static function buildAnticipo(Comprobacion $c, ?array $principalFile = null): array
     {
         $fields = config('smartker.fields');
-        $attributes = [];
+        $attributes = self::sharedAttributes($c, $fields);
+        $attributes[] = self::attr($fields['monto_total'], self::num($c->monto_anticipo));
 
-        $shared = [
-            'numero_empleado'    => $c->numero_empleado,
-            'nombre_empleado'    => $c->nombre_empleado,
-            'fecha_solicitud'    => Carbon::now('America/Mexico_City')->toDateString(),
-            'departamento'       => $c->departamento,
-            'centro_costos'      => $c->centro_costos,
-            'clabe'              => $c->clabe,
-            'sucursal_cedis'     => $c->sucursal_cedis,
-            'banco'              => $c->banco,
-            'tipo_gasto'         => $c->tipo_gasto,
-            'justificacion'      => $c->justificacion,
-            'monto_comprobacion' => '',               // n/a for anticipo
-            'folio_anticipo'     => '',
+        $files = [];
+        $fileCount = 0;
+        if ($principalFile) { $files[] = self::principal($principalFile); $fileCount++; }
+
+        return [
+            'payload'    => [['attributes' => $attributes, 'files' => $files]],
+            'file_count' => $fileCount,
         ];
-        foreach ($fields['shared'] as $name => $fieldId) {
-            $attributes[] = self::attr($fieldId, $shared[$name] ?? '');
-        }
-
-        // Monto de la solicitud.
-        $attributes[] = self::attr(
-            $fields['anticipo']['monto_solicitud'],
-            number_format((float) $c->monto_anticipo, 2, '.', '')
-        );
-
-        return ['attributes' => $attributes, 'file_count' => 0];
     }
 
-    /** Replace base64 data-URI values with a marker (for storage + logs). */
-    public static function sanitize(array $attributes): array
+    /** Deep copy of the payload with every base64 data-URI replaced (for storage + logs). */
+    public static function sanitize(array $payload): array
     {
-        return array_map(function ($attr) {
-            if (isset($attr['value']) && is_string($attr['value']) && str_starts_with($attr['value'], 'data:')) {
-                $attr['value'] = '[BASE64_FILE_OMITTED]';
+        array_walk_recursive($payload, function (&$v) {
+            if (is_string($v) && str_starts_with($v, 'data:')) {
+                $v = '[BASE64_FILE_OMITTED]';
             }
-            return $attr;
-        }, $attributes);
+        });
+        return $payload;
+    }
+
+    /* ----------------------------------------------------------------- helpers */
+
+    private static function sharedAttributes(Comprobacion $c, array $fields): array
+    {
+        $shared = [
+            'nombre_empleado' => $c->nombre_empleado,
+            'numero_empleado' => $c->numero_empleado,
+            'fecha_solicitud' => Carbon::now('America/Mexico_City')->toDateString(),
+            'departamento'    => $c->departamento,
+            'centro_costos'   => $c->centro_costos,
+            'clabe'           => $c->clabe,
+            'sucursal_cedis'  => $c->sucursal_cedis,
+            'banco'           => $c->banco,
+        ];
+        $out = [];
+        foreach ($fields['shared'] as $name => $fieldId) {
+            $out[] = self::attr($fieldId, $shared[$name] ?? '');
+        }
+        return $out;
     }
 
     private static function attr(int $fieldId, mixed $value): array
     {
+        return ['fieldId' => $fieldId, 'value' => (string) ($value ?? ''), 'tableAttributes' => []];
+    }
+
+    private static function cell(array $col, int $row, mixed $value, array $types): array
+    {
         return [
-            'fieldId'         => $fieldId,
+            'fieldColumnId'   => $col['id'],
+            'fieldId'         => $col['id'],
+            'row'             => $row,
+            'fieldTypeId'     => $types[$col['type']] ?? 1,
             'value'           => (string) ($value ?? ''),
-            'tableAttributes' => [],
+            'tableAttributes' => null,
         ];
+    }
+
+    private static function principal(array $f): array
+    {
+        return [
+            'fileName'    => $f['fileName'] ?? 'documento.pdf',
+            'extension'   => $f['extension'] ?? '.pdf',
+            'isPrincipal' => true,
+            'base64'      => $f['base64'] ?? '',
+        ];
+    }
+
+    private static function num(mixed $n): string
+    {
+        return number_format((float) $n, 2, '.', '');
     }
 }

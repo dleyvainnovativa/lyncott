@@ -12,60 +12,24 @@
     <div class="lx-review__card">
         <div class="lx-review__title"><i class="fa-solid fa-user"></i> Datos del Solicitante</div>
         <div class="lx-review__grid">
-            <div>
-                <div class="lx-review__k">Nombre</div>
-                <div class="lx-review__v" data-rv="nombre">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Correo electrónico</div>
-                <div class="lx-review__v" data-rv="correo">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Número de empleado</div>
-                <div class="lx-review__v lx-mono" data-rv="numero">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Departamento</div>
-                <div class="lx-review__v" data-rv="departamento">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Puesto</div>
-                <div class="lx-review__v" data-rv="puesto">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Centro de costos</div>
-                <div class="lx-review__v" data-rv="centro">—</div>
-            </div>
+            <div><div class="lx-review__k">Nombre</div><div class="lx-review__v" data-rv="nombre">—</div></div>
+            <div><div class="lx-review__k">Correo electrónico</div><div class="lx-review__v" data-rv="correo">—</div></div>
+            <div><div class="lx-review__k">Número de empleado</div><div class="lx-review__v lx-mono" data-rv="numero">—</div></div>
+            <div><div class="lx-review__k">Departamento</div><div class="lx-review__v" data-rv="departamento">—</div></div>
+            <div><div class="lx-review__k">Puesto</div><div class="lx-review__v" data-rv="puesto">—</div></div>
+            <div><div class="lx-review__k">Centro de costos</div><div class="lx-review__v" data-rv="centro">—</div></div>
         </div>
     </div>
 
     <div class="lx-review__card">
-        <div class="lx-review__title"><i class="fa-solid fa-calendar-days"></i> Datos del Gasto</div>
+        <div class="lx-review__title"><i class="fa-solid fa-calendar-days"></i> Datos del Viaje</div>
         <div class="lx-review__grid">
-            <div>
-                <div class="lx-review__k">Fecha de salida</div>
-                <div class="lx-review__v lx-mono" data-rv="salida">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Fecha de regreso</div>
-                <div class="lx-review__v lx-mono" data-rv="regreso">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Duración</div>
-                <div class="lx-review__v" data-rv="duracion">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Ruta</div>
-                <div class="lx-review__v" data-rv="ruta">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Medio de transporte</div>
-                <div class="lx-review__v" data-rv="medio">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Folio / Monto anticipo</div>
-                <div class="lx-review__v" data-rv="anticipo">—</div>
-            </div>
+            <div><div class="lx-review__k">Fecha de salida</div><div class="lx-review__v lx-mono" data-rv="salida">—</div></div>
+            <div><div class="lx-review__k">Fecha de regreso</div><div class="lx-review__v lx-mono" data-rv="regreso">—</div></div>
+            <div><div class="lx-review__k">Duración</div><div class="lx-review__v" data-rv="duracion">—</div></div>
+            <div><div class="lx-review__k">Ruta</div><div class="lx-review__v" data-rv="ruta">—</div></div>
+            <div><div class="lx-review__k">Medio de transporte</div><div class="lx-review__v" data-rv="medio">—</div></div>
+            <div><div class="lx-review__k">Folio / Monto anticipo</div><div class="lx-review__v" data-rv="anticipo">—</div></div>
         </div>
     </div>
 
@@ -116,22 +80,10 @@
         <h3 style="margin:8px 0 2px">Comprobación registrada</h3>
         <p style="color:var(--lx-muted);margin:0" data-ex="message"></p>
         <div class="lx-review__grid" style="margin-top:18px;text-align:left">
-            <div>
-                <div class="lx-review__k">Folio</div>
-                <div class="lx-review__v lx-mono" data-ex="folio">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k" data-ex-label="total">Total comprobación</div>
-                <div class="lx-review__v lx-mono" data-ex="total">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Payload Smartker</div>
-                <div class="lx-review__v" data-ex="payload">—</div>
-            </div>
-            <div>
-                <div class="lx-review__k">Archivos adjuntos</div>
-                <div class="lx-review__v" data-ex="files">—</div>
-            </div>
+            <div><div class="lx-review__k">Folio</div><div class="lx-review__v lx-mono" data-ex="folio">—</div></div>
+            <div><div class="lx-review__k" data-ex-label="total">Total comprobación</div><div class="lx-review__v lx-mono" data-ex="total">—</div></div>
+            <div><div class="lx-review__k">Payload Smartker</div><div class="lx-review__v" data-ex="payload">—</div></div>
+            <div><div class="lx-review__k">Archivos adjuntos</div><div class="lx-review__v" data-ex="files">—</div></div>
         </div>
     </div>
 </div>

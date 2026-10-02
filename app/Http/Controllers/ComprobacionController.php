@@ -183,24 +183,31 @@ class ComprobacionController extends Controller
                     ];
                 }
 
-                $built = SmartkerPayloadBuilder::build($comprobacion, $comprobacion->gastos, $filesByGastoId);
+                // Principal file = the generated Lyncott "DETALLE DE GASTOS" PDF.
+                $pdfData  = $this->buildPdfData($sol, $viaje, $gastos);
+                $pdfBytes = Pdf::loadView('pdf.detalle', $pdfData)->setPaper('letter')->output();
+                $principal = [
+                    'fileName'  => 'comprobacion-' . $comprobacion->folio() . '.pdf',
+                    'extension' => '.pdf',
+                    'base64'    => 'data:application/pdf;base64,' . base64_encode($pdfBytes),
+                ];
+
+                $built = SmartkerPayloadBuilder::build($comprobacion, $comprobacion->gastos, $filesByGastoId, $principal);
             } else {
                 $built = SmartkerPayloadBuilder::buildAnticipo($comprobacion);
             }
 
-            $sanitized = SmartkerPayloadBuilder::sanitize($built['attributes']);
+            $sanitized = SmartkerPayloadBuilder::sanitize($built['payload']);
             $live      = (bool) config('smartker.live');
             $sent      = false;
             $response  = null;
 
-            // Log mirrors the client's controller (base64 omitted).
-            Log::debug("Smartker {$endpointName} (" . ($live ? 'LIVE' : 'STUB') . ')', $sanitized);
+            // Log the sanitized payload (base64 omitted).
+            Log::debug("Smartker {$endpointName} (" . ($live ? 'LIVE' : 'STUB') . ')', ['payload' => $sanitized]);
 
             if ($live) {
                 try {
-                    $response = $flujo === 'comprobacion'
-                        ? SmartkerClient::complemento($built['attributes'])
-                        : SmartkerClient::anticipo($built['attributes']);
+                    $response = SmartkerClient::send($built['payload'], $flujo);
                     $sent = true;
                 } catch (\Throwable $e) {
                     $response = 'ERROR: ' . $e->getMessage();

@@ -54,30 +54,25 @@ class SmartkerClient
         return $data['token'];
     }
 
-    /** POST the comprobación (complemento) attributes. */
-    public static function complemento(array $attributes): ?string
+    /**
+     * POST the full payload for a flow ('comprobacion' | 'anticipo') to its
+     * web-form submit URL: /api/web-form/file/{workflowId}/{stationId}/submit.
+     * $payload is the complete array: [ { attributes, files } ].
+     */
+    public static function send(array $payload, string $flujo): ?string
     {
-        return self::submit($attributes, config('smartker.endpoints.complemento'));
-    }
+        $wf  = config("smartker.workflow.{$flujo}");
+        $url = rtrim(config('smartker.base_url'), '/')
+            . "/api/web-form/file/{$wf['id']}/{$wf['station']}/submit";
 
-    /** POST the anticipo attributes. */
-    public static function anticipo(array $attributes): ?string
-    {
-        return self::submit($attributes, config('smartker.endpoints.anticipo'));
-    }
-
-    /** POST attributes to a web-form submit URL. Returns the raw response body. */
-    private static function submit(array $attributes, string $url): ?string
-    {
         $token = self::authenticate();
-
-        $payload = json_encode(['attributes' => $attributes, 'files' => []]);
+        $body  = json_encode($payload);
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_POSTFIELDS     => $body,
             CURLOPT_HTTPHEADER     => [
                 'Accept: application/json',
                 'Content-Type: application/json',

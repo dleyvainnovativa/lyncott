@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Step 2 · Datos del Gasto
+   Step 2 · Datos del Viaje
    Captures the trip period, route, advance, cost center and transport.
    Computes "X días y Y noches" live, validates required fields, and pushes
    everything into central wizard state.

@@ -1,8 +1,8 @@
-{{-- STEP 2 · Datos del Gasto (Phase 3) --}}
+{{-- STEP 2 · Datos del Viaje (Phase 3) --}}
 <div class="lx-panel-head">
     <span class="lx-ico"><i class="fa-solid fa-calendar-days"></i></span>
     <div>
-        <h2>Datos del Gasto</h2>
+        <h2>Datos del Viaje</h2>
         <p>Registra el periodo, origen y destino de tu viaje.</p>
     </div>
 </div>
@@ -55,7 +55,7 @@
                 <select class="form-select" id="centro_costos" name="centro_costos">
                     <option value="">Seleccione centro de costos</option>
                     @foreach ($centros as $code => $label)
-                    <option value="{{ $code }}">{{ $label }}</option>
+                        <option value="{{ $code }}">{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
@@ -64,7 +64,7 @@
                 <select class="form-select" id="medio_transporte" name="medio_transporte">
                     <option value="">Seleccione el medio de transporte</option>
                     @foreach ($medios as $m)
-                    <option value="{{ $m }}">{{ $m }}</option>
+                        <option value="{{ $m }}">{{ $m }}</option>
                     @endforeach
                 </select>
             </div>
