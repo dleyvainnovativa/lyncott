@@ -196,19 +196,30 @@ class ComprobacionController extends Controller
             } else {
                 $built = SmartkerPayloadBuilder::buildAnticipo($comprobacion);
             }
+            // Log::debug("Payload", ['payload' => $built['payload']]);
+            // dd($built["payload"]);
 
-            $sanitized = SmartkerPayloadBuilder::sanitize($built['payload']);
-            $live      = (bool) config('smartker.live');
-            $sent      = false;
-            $response  = null;
+            $sanitized  = SmartkerPayloadBuilder::sanitize($built['payload']);
+            $live       = (bool) config('smartker.live');
+            $sent       = false;
+            $response   = null;
+            $httpStatus = null;
 
             // Log the sanitized payload (base64 omitted).
             Log::debug("Smartker {$endpointName} (" . ($live ? 'LIVE' : 'STUB') . ')', ['payload' => $sanitized]);
 
             if ($live) {
                 try {
-                    $response = SmartkerClient::send($built['payload'], $flujo);
-                    $sent = true;
+                    $res        = SmartkerClient::send($built['payload'], $flujo);
+                    $httpStatus = $res['status'];
+                    $response   = $res['body'];
+                    $sent       = $httpStatus >= 200 && $httpStatus < 300;
+                    Log::info('Smartker response', [
+                        'comprobacion' => $comprobacion->id,
+                        'url'          => $res['url'],
+                        'status'       => $httpStatus,
+                        'body'         => $response,
+                    ]);
                 } catch (\Throwable $e) {
                     $response = 'ERROR: ' . $e->getMessage();
                     Log::error('Smartker send failed', ['comprobacion' => $comprobacion->id, 'error' => $e->getMessage()]);
@@ -216,19 +227,18 @@ class ComprobacionController extends Controller
             }
 
             $payloadRecord = $comprobacion->payloads()->create([
-                'endpoint'   => $endpointName,
-                'live'       => $live,
-                'sent'       => $sent,
-                'file_count' => $built['file_count'],
-                'attributes' => $sanitized,
-                'response'   => $response,
+                'endpoint'    => $endpointName,
+                'live'        => $live,
+                'sent'        => $sent,
+                'http_status' => $httpStatus,
+                'file_count'  => $built['file_count'],
+                'attributes'  => $sanitized,
+                'response'    => $response,
             ]);
 
-            if ($sent) {
-                $comprobacion->update(['estatus' => 'enviada']);
-            }
+            $comprobacion->update(['estatus' => $sent ? 'enviada' : ($live ? 'error_envio' : 'capturada')]);
 
-            return compact('comprobacion', 'payloadRecord', 'live', 'sent');
+            return compact('comprobacion', 'payloadRecord', 'live', 'sent', 'httpStatus');
         });
 
         /** @var Comprobacion $c */
@@ -238,6 +248,7 @@ class ComprobacionController extends Controller
             'ok'            => true,
             'live'          => $result['live'],
             'sent'          => $result['sent'],
+            'http_status'   => $result['httpStatus'],
             'comprobacion_id' => $c->id,
             'folio'         => $c->folio(),
             'payload_id'    => $result['payloadRecord']->id,
@@ -251,8 +262,10 @@ class ComprobacionController extends Controller
                 'anticipo'    => (float) $c->monto_anticipo,
             ],
             'message'       => $result['live']
-                ? ($result['sent'] ? 'Comprobación enviada a Smartker.' : 'Comprobación guardada; el envío a Smartker falló (ver logs).')
-                : 'Comprobación guardada. Payload construido y almacenado (envío deshabilitado en modo demo).',
+                ? ($result['sent']
+                    ? 'Enviada a Smartker (HTTP ' . $result['httpStatus'] . ').'
+                    : 'Guardada; el envío a Smartker no fue exitoso (HTTP ' . ($result['httpStatus'] ?? 'sin respuesta') . '). Revisa el log del payload.')
+                : 'Guardada. Payload construido y almacenado (envío deshabilitado: SMARTKER_LIVE=false).',
         ]);
     }
 
@@ -280,7 +293,7 @@ class ComprobacionController extends Controller
     /** Group gastos by categoría and format for the PDF view. */
     private function buildPdfData(array $sol, array $viaje, array $gastos): array
     {
-        $fmt = fn ($n) => '$' . number_format((float) $n, 2);
+        $fmt = fn($n) => '$' . number_format((float) $n, 2);
 
         // Embed the Lyncott logo (red, original) as base64 so DomPDF can render it.
         $logoPath = public_path('img/logo.png');
@@ -333,7 +346,7 @@ class ComprobacionController extends Controller
                 'centro_costos' => $viaje['centro_costos'] ?? ($sol['centro_costos'] ?? ''),
                 'periodo'       => $periodo,
                 'ruta'          => trim(($viaje['origen'] ?? '—') . ' → ' . ($viaje['destino'] ?? '—')),
-                'folio_anticipo'=> $viaje['folio_anticipo'] ?? '',
+                'folio_anticipo' => $viaje['folio_anticipo'] ?? '',
                 'fecha'         => Carbon::now('America/Mexico_City')->translatedFormat('d/M/Y'),
             ],
             'grupos' => array_values($grupos),

@@ -58,15 +58,19 @@ class SmartkerClient
      * POST the full payload for a flow ('comprobacion' | 'anticipo') to its
      * web-form submit URL: /api/web-form/file/{workflowId}/{stationId}/submit.
      * $payload is the complete array: [ { attributes, files } ].
+     *
+     * @return array{status: int, body: ?string, url: string}
      */
-    public static function send(array $payload, string $flujo): ?string
+    public static function send(array $payload, string $flujo): array
     {
         $wf  = config("smartker.workflow.{$flujo}");
         $url = rtrim(config('smartker.base_url'), '/')
             . "/api/web-form/file/{$wf['id']}/{$wf['station']}/submit";
 
         $token = self::authenticate();
-        $body  = json_encode($payload);
+        $body  = json_encode($payload, true);
+        Log::debug("Payload", [$payload]);
+
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -79,14 +83,18 @@ class SmartkerClient
                 'hostname: ' . config('smartker.hostname'),
                 'Authorization: Bearer ' . $token,
             ],
+            CURLOPT_TIMEOUT => 120,   // base64 PDFs can be large
         ]);
 
         $response = curl_exec($ch);
+        $status   = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if (curl_errno($ch)) {
-            throw new \Exception(curl_error($ch));
+            $err = curl_error($ch);
+            curl_close($ch);
+            throw new \Exception($err);
         }
         curl_close($ch);
 
-        return $response;
+        return ['status' => $status, 'body' => $response, 'url' => $url];
     }
 }

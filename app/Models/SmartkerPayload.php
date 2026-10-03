@@ -12,10 +12,11 @@ class SmartkerPayload extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'attributes' => 'array',
-        'live'       => 'boolean',
-        'sent'       => 'boolean',
-        'file_count' => 'integer',
+        'attributes'  => 'array',
+        'live'        => 'boolean',
+        'sent'        => 'boolean',
+        'http_status' => 'integer',
+        'file_count'  => 'integer',
     ];
 
     public function comprobacion(): BelongsTo
