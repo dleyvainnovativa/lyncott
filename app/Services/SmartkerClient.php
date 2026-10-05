@@ -68,9 +68,7 @@ class SmartkerClient
             . "/api/web-form/file/{$wf['id']}/{$wf['station']}/submit";
 
         $token = self::authenticate();
-        $body  = json_encode($payload, true);
-        Log::debug("Payload", [$payload]);
-
+        $body  = json_encode($payload);
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [

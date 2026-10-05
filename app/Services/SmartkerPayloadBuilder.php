@@ -71,8 +71,11 @@ class SmartkerPayloadBuilder
         $files = [];
         if ($principalFile) { $files[] = self::principal($principalFile); $fileCount++; }
 
+        // The /submit endpoint expects a single JSON OBJECT (SubmitWebformInputDto),
+        // NOT an array wrapper — sending [ {...} ] returns HTTP 400 "Cannot
+        // deserialize the current JSON array ... requires a JSON object".
         return [
-            'payload'    => [['attributes' => $attributes, 'files' => $files]],
+            'payload'    => ['attributes' => $attributes, 'files' => $files],
             'file_count' => $fileCount,
         ];
     }
@@ -94,7 +97,7 @@ class SmartkerPayloadBuilder
         if ($principalFile) { $files[] = self::principal($principalFile); $fileCount++; }
 
         return [
-            'payload'    => [['attributes' => $attributes, 'files' => $files]],
+            'payload'    => ['attributes' => $attributes, 'files' => $files],
             'file_count' => $fileCount,
         ];
     }

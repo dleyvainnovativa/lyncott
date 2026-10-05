@@ -196,8 +196,6 @@ class ComprobacionController extends Controller
             } else {
                 $built = SmartkerPayloadBuilder::buildAnticipo($comprobacion);
             }
-            // Log::debug("Payload", ['payload' => $built['payload']]);
-            // dd($built["payload"]);
 
             $sanitized  = SmartkerPayloadBuilder::sanitize($built['payload']);
             $live       = (bool) config('smartker.live');
