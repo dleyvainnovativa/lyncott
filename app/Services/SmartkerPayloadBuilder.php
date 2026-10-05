@@ -120,7 +120,8 @@ class SmartkerPayloadBuilder
         $shared = [
             'nombre_empleado' => $c->nombre_empleado,
             'numero_empleado' => $c->numero_empleado,
-            'fecha_solicitud' => Carbon::now('America/Mexico_City')->toDateString(),
+            // fieldId 3 = fecha del gasto 1 (start of the range), fallback to today.
+            'fecha_solicitud' => $c->fecha_salida?->toDateString() ?: Carbon::now('America/Mexico_City')->toDateString(),
             'departamento'    => $c->departamento,
             'centro_costos'   => $c->centro_costos,
             'clabe'           => $c->clabe,

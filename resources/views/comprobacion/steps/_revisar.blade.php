@@ -24,12 +24,15 @@
     <div class="lx-review__card">
         <div class="lx-review__title"><i class="fa-solid fa-calendar-days"></i> Datos del Viaje</div>
         <div class="lx-review__grid">
-            <div><div class="lx-review__k">Fecha de salida</div><div class="lx-review__v lx-mono" data-rv="salida">—</div></div>
-            <div><div class="lx-review__k">Fecha de regreso</div><div class="lx-review__v lx-mono" data-rv="regreso">—</div></div>
+            <div><div class="lx-review__k">Fecha del gasto 1</div><div class="lx-review__v lx-mono" data-rv="fecha1">—</div></div>
+            <div><div class="lx-review__k">Fecha del gasto 2</div><div class="lx-review__v lx-mono" data-rv="fecha2">—</div></div>
             <div><div class="lx-review__k">Duración</div><div class="lx-review__v" data-rv="duracion">—</div></div>
-            <div><div class="lx-review__k">Ruta</div><div class="lx-review__v" data-rv="ruta">—</div></div>
-            <div><div class="lx-review__k">Medio de transporte</div><div class="lx-review__v" data-rv="medio">—</div></div>
-            <div><div class="lx-review__k">Folio / Monto anticipo</div><div class="lx-review__v" data-rv="anticipo">—</div></div>
+            <div><div class="lx-review__k">Tipo de gasto</div><div class="lx-review__v" data-rv="tipo">—</div></div>
+            <div><div class="lx-review__k">Banco</div><div class="lx-review__v" data-rv="banco">—</div></div>
+            <div><div class="lx-review__k">CLABE</div><div class="lx-review__v lx-mono" data-rv="clabe">—</div></div>
+            <div><div class="lx-review__k">Centro de costos</div><div class="lx-review__v" data-rv="vcentro">—</div></div>
+            <div><div class="lx-review__k">Sucursal</div><div class="lx-review__v" data-rv="sucursal">—</div></div>
+            <div data-rv-wrap="folio"><div class="lx-review__k">Folio de anticipo</div><div class="lx-review__v" data-rv="folio">—</div></div>
         </div>
     </div>
 

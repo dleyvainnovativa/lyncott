@@ -59,7 +59,8 @@ export const Wizard = {
     this.steps.forEach((p, idx) => { p.hidden = idx !== i; });
     this.stepperItems.forEach((li, idx) => {
       const enabled = this.enabled(idx);
-      li.classList.toggle('is-skipped', !enabled);
+      // Skipped steps are hidden from the stepper entirely (not just dimmed).
+      li.hidden = !enabled;
       li.classList.toggle('is-active', idx === i);
       li.classList.toggle('is-done', idx < i && enabled);
       li.style.cursor = (idx < i && enabled) ? 'pointer' : 'default';

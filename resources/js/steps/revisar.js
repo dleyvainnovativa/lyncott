@@ -29,12 +29,15 @@ export function initRevisar(Lx) {
     setRv('puesto', s.puesto || '—');
     setRv('centro', v.centro_costos || s.centro_costos || '—');
 
-    setRv('salida', v.fecha_salida || '—');
-    setRv('regreso', v.fecha_regreso || '—');
+    setRv('fecha1', v.fecha_gasto_1 || '—');
+    setRv('fecha2', v.fecha_gasto_2 || '—');
     setRv('duracion', v.dias ? `${v.dias} días y ${v.noches} noches` : '—');
-    setRv('ruta', `${v.origen || '—'} → ${v.destino || '—'}`);
-    setRv('medio', v.medio_transporte || '—');
-    setRv('anticipo', (v.folio_anticipo || 's/folio') + ' · ' + money(v.monto_anticipo || 0));
+    setRv('tipo', v.tipo_gasto || '—');
+    setRv('banco', v.banco || '—');
+    setRv('clabe', v.clabe || '—');
+    setRv('vcentro', v.centro_costos || '—');
+    setRv('sucursal', v.sucursal || '—');
+    setRv('folio', v.folio_anticipo || '—');
 
     const cf = g.filter((r) => r.tipo === 'cf').reduce((a, r) => a + (+r.total || 0), 0);
     const sf = g.filter((r) => r.tipo === 'sf').reduce((a, r) => a + (+r.total || 0), 0);
@@ -44,12 +47,12 @@ export function initRevisar(Lx) {
     setRv('tAnt', money(v.monto_anticipo || 0));
   }
 
-  // Toggle sections by flow: anticipo = amount only (no gastos totals, no PDF).
+  // Toggle sections by flow. Both flows now get a PDF preview.
   function applyFlow(state) {
     const anticipo = state.flujo === 'anticipo';
-    panel.querySelector('#rvAnticipo').hidden = !anticipo;
-    panel.querySelector('#rvTotales').hidden = anticipo;
-    panel.querySelector('#rvPdfCard').hidden = anticipo;
+    panel.querySelector('#rvAnticipo').hidden = !anticipo;   // monto tile (anticipo)
+    panel.querySelector('#rvTotales').hidden = anticipo;     // gastos totals (comprobación)
+    panel.querySelector('[data-rv-wrap="folio"]').hidden = anticipo; // folio row only for comprobación
   }
 
   // Strip base64 before asking for the preview (keeps the request light).
@@ -72,7 +75,7 @@ export function initRevisar(Lx) {
           'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ solicitante: state.solicitante, viaje: state.viaje, gastos: lightGastos(state) }),
+        body: JSON.stringify({ flujo: state.flujo, solicitante: state.solicitante, viaje: state.viaje, gastos: lightGastos(state) }),
       });
       if (!res.ok) throw new Error('pdf');
       const blob = await res.blob();
@@ -90,7 +93,7 @@ export function initRevisar(Lx) {
     onEnter(state) {
       fillSummary(state);
       applyFlow(state);
-      if (state.flujo !== 'anticipo') loadPdf(state);
+      loadPdf(state);   // both flows now preview a PDF (detalle / anticipo)
     },
     validate() {
       if (!q('#terminos').checked) {

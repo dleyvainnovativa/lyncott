@@ -26,7 +26,7 @@ return [
 
     'public_key'  => env('SMARTKER_PUBLIC_KEY'),
     'private_key' => env('SMARTKER_PRIVATE_KEY'),
-    'hostname'    => env('SMARTKER_HOSTNAME', 'demo-lyncott'),
+    'hostname'    => env('SMARTKER_HOSTNAME', 'intra'),
 
     'base_url' => env('SMARTKER_BASE_URL', 'https://v2-smartker-api.capturebi.com'),
 
@@ -42,8 +42,8 @@ return [
         ],
         // Anticipo form UUIDs not confirmed yet — placeholders from the upload form.
         'anticipo' => [
-            'id'      => env('SMARTKER_ANT_WORKFLOW_ID', '1d326fc2-da9c-4457-b749-143d7502b2fb'),
-            'station' => env('SMARTKER_ANT_STATION_ID', '9a1a4823-00f4-4c39-9a28-a24865343e88'),
+            'id'      => env('SMARTKER_ANT_WORKFLOW_ID', '3818edb4-1cd8-4df7-9375-9537d77492f2'),
+            'station' => env('SMARTKER_ANT_STATION_ID', 'f55b1593-e791-4da0-aa21-95b4cd1f5d85'),
         ],
     ],
 

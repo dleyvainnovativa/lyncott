@@ -220,6 +220,32 @@ h1, h2, h3 { text-wrap: balance; }
 .form-label { font-size: .78rem; font-weight: 700; letter-spacing: .01em; color: var(--lx-fg); margin-bottom: 6px; }
 .is-valid-lx { border-color: var(--lx-ok) !important; }
 
+/* Required (*) / optional markers next to labels. */
+.lx-req { color: var(--lx-red); font-weight: 700; }
+.lx-req.lx-opt { color: var(--lx-faint); font-weight: 400; font-size: .85em; }
+
+/* flatpickr — dark-theme polish (library ships a light calendar). */
+:root[data-theme="dark"] .flatpickr-calendar,
+:root:not([data-theme="light"]) .flatpickr-calendar {
+  background: var(--lx-surface); color: var(--lx-fg);
+  box-shadow: var(--lx-shadow-lg); border: 1px solid var(--lx-line);
+}
+:root[data-theme="dark"] .flatpickr-months .flatpickr-month,
+:root[data-theme="dark"] .flatpickr-weekdays,
+:root[data-theme="dark"] span.flatpickr-weekday,
+:root:not([data-theme="light"]) .flatpickr-months .flatpickr-month,
+:root:not([data-theme="light"]) .flatpickr-weekdays,
+:root:not([data-theme="light"]) span.flatpickr-weekday { background: var(--lx-surface); color: var(--lx-fg); fill: var(--lx-fg); }
+:root[data-theme="dark"] .flatpickr-day,
+:root:not([data-theme="light"]) .flatpickr-day { color: var(--lx-fg); }
+:root[data-theme="dark"] .flatpickr-day.flatpickr-disabled,
+:root:not([data-theme="light"]) .flatpickr-day.flatpickr-disabled { color: var(--lx-faint); }
+:root[data-theme="dark"] .flatpickr-day:hover,
+:root:not([data-theme="light"]) .flatpickr-day:hover { background: var(--lx-surface-2); }
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange,
+.flatpickr-day.inRange { background: var(--lx-red) !important; border-color: var(--lx-red) !important; color: #fff !important; box-shadow: none !important; }
+.flatpickr-day.inRange { background: var(--lx-red-weak) !important; color: var(--lx-red-ink) !important; }
+
 /* Input with an overlaid "validated" check (employee lookup). */
 .lx-input-wrap { position: relative; }
 .lx-input-wrap .lx-ok-check { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--lx-ok); display: none; pointer-events: none; }

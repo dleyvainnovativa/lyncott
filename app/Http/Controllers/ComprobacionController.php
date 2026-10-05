@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Banco;
 use App\Models\Comprobacion;
 use App\Models\Empleado;
 use App\Models\Gasto;
@@ -22,9 +23,10 @@ class ComprobacionController extends Controller
     public function index(): View
     {
         return view('comprobacion.index', [
-            'categorias' => config('smartker.categorias', []),
-            'centros'    => $this->centrosCosto(),
-            'medios'     => $this->mediosTransporte(),
+            'categorias'  => config('smartker.categorias', []),
+            'centros'     => $this->centrosCosto(),
+            'tiposGasto'  => $this->tiposGasto(),
+            'bancos'      => Banco::where('activo', true)->orderBy('nombre')->get(['clave', 'nombre']),
         ]);
     }
 
@@ -61,20 +63,21 @@ class ComprobacionController extends Controller
         ], 501);
     }
 
-    /** Phase 5 — render the Lyncott "DETALLE DE GASTOS" PDF for the review preview. */
+    /** Phase 5 — render the review-preview PDF (detalle for comprobación, summary for anticipo). */
     public function previewPdf(Request $request)
     {
-        // Read the full input (NOT validate(), which returns only ruled keys and
-        // would strip fecha/rfc/compañía/categoría from each gasto row).
-        $data = $this->buildPdfData(
-            (array) $request->input('solicitante', []),
-            (array) $request->input('viaje', []),
-            (array) $request->input('gastos', [])
-        );
+        // Read full input (NOT validate(), which returns only ruled keys).
+        $sol   = (array) $request->input('solicitante', []);
+        $viaje = (array) $request->input('viaje', []);
+        $flujo = $request->input('flujo', 'comprobacion');
 
-        return Pdf::loadView('pdf.detalle', $data)
-            ->setPaper('letter')
-            ->stream('detalle-gastos.pdf');
+        if ($flujo === 'anticipo') {
+            return Pdf::loadView('pdf.anticipo', $this->buildAnticipoPdfData($sol, $viaje))
+                ->setPaper('letter')->stream('anticipo.pdf');
+        }
+
+        $data = $this->buildPdfData($sol, $viaje, (array) $request->input('gastos', []));
+        return Pdf::loadView('pdf.detalle', $data)->setPaper('letter')->stream('detalle-gastos.pdf');
     }
 
     /** Phase 5 — persist the comprobación/anticipo, build the Smartker payload, stub the send. */
@@ -121,21 +124,19 @@ class ComprobacionController extends Controller
                 'departamento'       => $sol['departamento'] ?? null,
                 'gerencia'           => $sol['gerencia'] ?? null,
                 'direccion'          => $sol['direccion'] ?? null,
-                'centro_costos'      => $viaje['centro_costos'] ?? ($sol['centro_costos'] ?? null),
-                'clabe'              => $sol['clabe'] ?? null,
-                'banco'              => $sol['banco'] ?? null,
-                'sucursal_cedis'     => $sol['sucursal_cedis'] ?? null,
-                'fecha_salida'       => $viaje['fecha_salida'] ?? null,
-                'fecha_regreso'      => $viaje['fecha_regreso'] ?? null,
+                // Pago/clasificación: from the viaje form, fallback to the employee record.
+                'centro_costos'      => ($viaje['centro_costos'] ?? '') ?: ($sol['centro_costos'] ?? null),
+                'clabe'              => ($viaje['clabe'] ?? '') ?: ($sol['clabe'] ?? null),
+                'banco'              => ($viaje['banco'] ?? '') ?: ($sol['banco'] ?? null),
+                'sucursal_cedis'     => ($viaje['sucursal'] ?? '') ?: ($sol['sucursal_cedis'] ?? null),
+                'fecha_salida'       => $viaje['fecha_gasto_1'] ?? null,
+                'fecha_regreso'      => $viaje['fecha_gasto_2'] ?? null,
                 'dias'               => (int) ($viaje['dias'] ?? 0),
                 'noches'             => (int) ($viaje['noches'] ?? 0),
-                'origen'             => $viaje['origen'] ?? null,
-                'destino'            => $viaje['destino'] ?? null,
                 'folio_anticipo'     => $viaje['folio_anticipo'] ?? null,
                 'monto_anticipo'     => (float) ($viaje['monto_anticipo'] ?? 0),
-                'medio_transporte'   => $viaje['medio_transporte'] ?? null,
                 'observaciones'      => $viaje['observaciones'] ?? null,
-                'tipo_gasto'         => 'Viaje',
+                'tipo_gasto'         => ($viaje['tipo_gasto'] ?? '') ?: 'Viaje',
                 'justificacion'      => $viaje['observaciones'] ?? null,
                 'total_con_factura'  => $totCf,
                 'total_sin_factura'  => $totSf,
@@ -194,7 +195,16 @@ class ComprobacionController extends Controller
 
                 $built = SmartkerPayloadBuilder::build($comprobacion, $comprobacion->gastos, $filesByGastoId, $principal);
             } else {
-                $built = SmartkerPayloadBuilder::buildAnticipo($comprobacion);
+                // Principal file = the generated "SOLICITUD DE ANTICIPO" summary PDF.
+                $pdfData  = $this->buildAnticipoPdfData($sol, $viaje);
+                $pdfBytes = Pdf::loadView('pdf.anticipo', $pdfData)->setPaper('letter')->output();
+                $principal = [
+                    'fileName'  => 'anticipo-' . $comprobacion->folio() . '.pdf',
+                    'extension' => '.pdf',
+                    'base64'    => 'data:application/pdf;base64,' . base64_encode($pdfBytes),
+                ];
+
+                $built = SmartkerPayloadBuilder::buildAnticipo($comprobacion, $principal);
             }
 
             $sanitized  = SmartkerPayloadBuilder::sanitize($built['payload']);
@@ -291,7 +301,7 @@ class ComprobacionController extends Controller
     /** Group gastos by categoría and format for the PDF view. */
     private function buildPdfData(array $sol, array $viaje, array $gastos): array
     {
-        $fmt = fn($n) => '$' . number_format((float) $n, 2);
+        $fmt = fn ($n) => '$' . number_format((float) $n, 2);
 
         // Embed the Lyncott logo (red, original) as base64 so DomPDF can render it.
         $logoPath = public_path('img/logo.png');
@@ -330,11 +340,6 @@ class ComprobacionController extends Controller
         }
         unset($grupo);
 
-        $periodo = ($viaje['fecha_salida'] ?? '—') . ' → ' . ($viaje['fecha_regreso'] ?? '—');
-        if (! empty($viaje['dias'])) {
-            $periodo .= '  (' . $viaje['dias'] . ' días, ' . ($viaje['noches'] ?? 0) . ' noches)';
-        }
-
         return [
             'logo' => $logo,
             'm' => [
@@ -342,9 +347,8 @@ class ComprobacionController extends Controller
                 'numero'        => $sol['numero_empleado'] ?? '—',
                 'departamento'  => $sol['departamento'] ?? '',
                 'centro_costos' => $viaje['centro_costos'] ?? ($sol['centro_costos'] ?? ''),
-                'periodo'       => $periodo,
-                'ruta'          => trim(($viaje['origen'] ?? '—') . ' → ' . ($viaje['destino'] ?? '—')),
-                'folio_anticipo' => $viaje['folio_anticipo'] ?? '',
+                'periodo'       => $this->periodo($viaje),
+                'folio_anticipo'=> $viaje['folio_anticipo'] ?? '',
                 'fecha'         => Carbon::now('America/Mexico_City')->translatedFormat('d/M/Y'),
             ],
             'grupos' => array_values($grupos),
@@ -354,6 +358,43 @@ class ComprobacionController extends Controller
                 'total'   => $fmt($totTotal),
             ],
         ];
+    }
+
+    /** Data for the anticipo summary PDF. */
+    private function buildAnticipoPdfData(array $sol, array $viaje): array
+    {
+        $logoPath = public_path('img/logo.png');
+        $logo = file_exists($logoPath)
+            ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($logoPath))
+            : null;
+
+        return [
+            'logo' => $logo,
+            'm' => [
+                'nombre'        => $sol['nombre_completo'] ?? '—',
+                'numero'        => $sol['numero_empleado'] ?? '—',
+                'departamento'  => $sol['departamento'] ?? '',
+                'periodo'       => $this->periodo($viaje),
+                'tipo_gasto'    => $viaje['tipo_gasto'] ?? '',
+                'centro_costos' => $viaje['centro_costos'] ?? '',
+                'banco'         => $viaje['banco'] ?? '',
+                'clabe'         => $viaje['clabe'] ?? '',
+                'sucursal'      => $viaje['sucursal'] ?? '',
+                'observaciones' => $viaje['observaciones'] ?? '',
+                'monto'         => '$' . number_format((float) ($viaje['monto_anticipo'] ?? 0), 2),
+                'fecha'         => Carbon::now('America/Mexico_City')->translatedFormat('d/M/Y'),
+            ],
+        ];
+    }
+
+    /** "fecha1 → fecha2 (N días, M noches)" from the viaje range. */
+    private function periodo(array $viaje): string
+    {
+        $p = ($viaje['fecha_gasto_1'] ?? '—') . ' → ' . ($viaje['fecha_gasto_2'] ?? '—');
+        if (! empty($viaje['dias'])) {
+            $p .= '  (' . $viaje['dias'] . ' días, ' . ($viaje['noches'] ?? 0) . ' noches)';
+        }
+        return $p;
     }
 
     private function centrosCosto(): array
@@ -368,8 +409,9 @@ class ComprobacionController extends Controller
         ];
     }
 
-    private function mediosTransporte(): array
+    /** Catálogo "Tipo de Gasto" (lista). */
+    private function tiposGasto(): array
     {
-        return ['Avión', 'Autobús', 'Automóvil propio', 'Automóvil rentado', 'Tren', 'Otro'];
+        return ['Viaje', 'Compras', 'Representación', 'Transporte', 'Hospedaje', 'Alimentos', 'Otros'];
     }
 }
