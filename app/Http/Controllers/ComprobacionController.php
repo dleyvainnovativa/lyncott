@@ -193,7 +193,7 @@ class ComprobacionController extends Controller
                     'base64'    => 'data:application/pdf;base64,' . base64_encode($pdfBytes),
                 ];
 
-                $built = SmartkerPayloadBuilder::build($comprobacion, $comprobacion->gastos, $filesByGastoId, $principal);
+                $built = SmartkerPayloadBuilder::build($comprobacion, 'comprobacion', $comprobacion->gastos, $filesByGastoId, $principal);
             } else {
                 // Principal file = the generated "SOLICITUD DE ANTICIPO" summary PDF.
                 $pdfData  = $this->buildAnticipoPdfData($sol, $viaje);
@@ -204,7 +204,7 @@ class ComprobacionController extends Controller
                     'base64'    => 'data:application/pdf;base64,' . base64_encode($pdfBytes),
                 ];
 
-                $built = SmartkerPayloadBuilder::buildAnticipo($comprobacion, $principal);
+                $built = SmartkerPayloadBuilder::build($comprobacion, 'anticipo', [], [], $principal);
             }
 
             $sanitized  = SmartkerPayloadBuilder::sanitize($built['payload']);

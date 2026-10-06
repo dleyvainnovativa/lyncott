@@ -20,7 +20,7 @@ export const Wizard = {
   stepperItems: [],
   hooks: {},
   state: {
-    flujo: 'comprobacion',   // 'comprobacion' | 'anticipo'
+    flujo: 'anticipo',   // default selection; 'anticipo' | 'comprobacion'
     solicitante: {},
     viaje: {},
     gastos: [],

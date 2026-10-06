@@ -9,7 +9,7 @@ export function initFlujo(Lx) {
   if (!panel) return;
 
   const cards = [...panel.querySelectorAll('.lx-flow-card')];
-  let selected = Lx.Wizard.state.flujo || 'comprobacion';
+  let selected = Lx.Wizard.state.flujo || 'anticipo';
 
   function paint() {
     cards.forEach((c) => {

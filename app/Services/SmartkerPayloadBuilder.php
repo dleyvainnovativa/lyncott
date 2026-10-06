@@ -3,97 +3,45 @@
 namespace App\Services;
 
 use App\Models\Comprobacion;
-use Illuminate\Support\Carbon;
 
 /**
- * Builds the Smartker payload in its real shape:
+ * Builds the Smartker payload as a single JSON object { attributes, files }.
  *
- *   [ { "attributes": [ ...shared..., {fieldId:13, tableAttributes:[...]}, {fieldId:14} ],
- *       "files": [ { fileName, extension, isPrincipal, base64 } ] } ]
+ * Field ids come from config('smartker.fields.<flujo>'), one map per flow:
+ *   - comprobación: numero/nombre/desde/hasta/folio/tipo/observaciones/depto/
+ *     centro/clabe/sucursal/banco + the gastos table (fieldId 13) + monto (14).
+ *   - anticipo: same identity fields (ids 18-29) + monto, NO table.
  *
- * - Shared attributes come from config('smartker.fields.shared') (ids 1-8).
- * - The gastos table is config fieldId 13, with one set of cells per row
- *   (row starts at 1): categoría(9), PDF(10,file), XML(11,file),
- *   justificación(12), cantidad(15), importe(16).
- * - Grand total is config fieldId 14.
- * - The principal document goes in `files`.
- *
- * All ids live in config/smartker.php. Nothing here sends — see SmartkerClient.
+ * The map's key order is the emission order. 'tabla' (comprobación only)
+ * expands to the fieldId-13 attribute built from the gastos rows.
  */
 class SmartkerPayloadBuilder
 {
     /**
-     * @param  iterable   $gastos          Gasto models (ordered).
+     * @param  iterable   $gastos          Gasto models (comprobación only).
      * @param  array      $filesByGastoId  [gastoId => ['xml'=>dataUri|null, 'pdf'=>dataUri|null]]
      * @param  array|null $principalFile   ['fileName'=>, 'extension'=>, 'base64'=>dataUri]
      * @return array{payload: array, file_count: int}
      */
-    public static function build(Comprobacion $c, iterable $gastos, array $filesByGastoId = [], ?array $principalFile = null): array
+    public static function build(Comprobacion $c, string $flujo, iterable $gastos = [], array $filesByGastoId = [], ?array $principalFile = null): array
     {
-        $fields = config('smartker.fields');
-        $types  = config('smartker.field_types');
+        $map    = config("smartker.fields.{$flujo}", []);
+        $values = self::values($c, $flujo);
 
-        $attributes = self::sharedAttributes($c, $fields);
+        $attributes = [];
+        $fileCount  = 0;
 
-        // Table (fieldId 13) — flatten every row's cells into one tableAttributes array.
-        $cols = $fields['tabla']['columns'];
-        $cells = [];
-        $fileCount = 0;
-        $totalImporte = 0.0;
-        $row = 0;
-
-        foreach ($gastos as $g) {
-            $row++;
-            $files = $filesByGastoId[$g->id] ?? [];
-            $pdf = $files['pdf'] ?? '';
-            $xml = $files['xml'] ?? '';
-            if ($pdf) $fileCount++;
-            if ($xml) $fileCount++;
-            $totalImporte += (float) $g->total;
-
-            $cells[] = self::cell($cols['categoria'], $row, $g->categoria ?? '', $types);
-            $cells[] = self::cell($cols['pdf'], $row, $pdf, $types);
-            $cells[] = self::cell($cols['xml'], $row, $xml, $types);
-            $cells[] = self::cell($cols['justificacion'], $row, $g->justificacion ?? '', $types);
-            $cells[] = self::cell($cols['cantidad'], $row, '1', $types);
-            $cells[] = self::cell($cols['importe'], $row, self::num($g->total), $types);
+        foreach ($map as $name => $fieldId) {
+            if ($name === 'tabla') {
+                [$tableAttr, $cnt] = self::tableAttribute($gastos, $filesByGastoId);
+                $attributes[] = $tableAttr;
+                $fileCount += $cnt;
+                continue;
+            }
+            $attributes[] = self::attr($fieldId, $values[$name] ?? '');
         }
 
-        $attributes[] = [
-            'fieldId'         => $fields['tabla']['fieldId'],
-            'value'           => '',
-            'tableAttributes' => $cells,
-        ];
-
-        // Grand total (fieldId 14).
-        $attributes[] = self::attr($fields['monto_total'], self::num($totalImporte ?: $c->monto_comprobacion));
-
         $files = [];
-        if ($principalFile) { $files[] = self::principal($principalFile); $fileCount++; }
-
-        // The /submit endpoint expects a single JSON OBJECT (SubmitWebformInputDto),
-        // NOT an array wrapper — sending [ {...} ] returns HTTP 400 "Cannot
-        // deserialize the current JSON array ... requires a JSON object".
-        return [
-            'payload'    => ['attributes' => $attributes, 'files' => $files],
-            'file_count' => $fileCount,
-        ];
-    }
-
-    /**
-     * Anticipo payload: shared attributes + grand total (monto del anticipo).
-     * No gastos table.
-     *
-     * @return array{payload: array, file_count: int}
-     */
-    public static function buildAnticipo(Comprobacion $c, ?array $principalFile = null): array
-    {
-        $fields = config('smartker.fields');
-        $attributes = self::sharedAttributes($c, $fields);
-        $attributes[] = self::attr($fields['monto_total'], self::num($c->monto_anticipo));
-
-        $files = [];
-        $fileCount = 0;
         if ($principalFile) { $files[] = self::principal($principalFile); $fileCount++; }
 
         return [
@@ -102,7 +50,7 @@ class SmartkerPayloadBuilder
         ];
     }
 
-    /** Deep copy of the payload with every base64 data-URI replaced (for storage + logs). */
+    /** Deep copy of the payload with every base64 data-URI replaced (storage + logs). */
     public static function sanitize(array $payload): array
     {
         array_walk_recursive($payload, function (&$v) {
@@ -115,24 +63,58 @@ class SmartkerPayloadBuilder
 
     /* ----------------------------------------------------------------- helpers */
 
-    private static function sharedAttributes(Comprobacion $c, array $fields): array
+    /** Logical name => value, for both flows. */
+    private static function values(Comprobacion $c, string $flujo): array
     {
-        $shared = [
-            'nombre_empleado' => $c->nombre_empleado,
+        return [
             'numero_empleado' => $c->numero_empleado,
-            // fieldId 3 = fecha del gasto 1 (start of the range), fallback to today.
-            'fecha_solicitud' => $c->fecha_salida?->toDateString() ?: Carbon::now('America/Mexico_City')->toDateString(),
+            'nombre_empleado' => $c->nombre_empleado,
+            'desde'           => $c->fecha_salida?->toDateString() ?? '',
+            'hasta'           => $c->fecha_regreso?->toDateString() ?? '',
+            'folio_anticipo'  => $c->folio_anticipo,
+            'tipo_gasto'      => $c->tipo_gasto,
+            'observaciones'   => $c->observaciones,
             'departamento'    => $c->departamento,
             'centro_costos'   => $c->centro_costos,
             'clabe'           => $c->clabe,
-            'sucursal_cedis'  => $c->sucursal_cedis,
+            'sucursal'        => $c->sucursal_cedis,
             'banco'           => $c->banco,
+            'monto'           => self::num($flujo === 'anticipo' ? $c->monto_anticipo : $c->monto_comprobacion),
         ];
-        $out = [];
-        foreach ($fields['shared'] as $name => $fieldId) {
-            $out[] = self::attr($fieldId, $shared[$name] ?? '');
+    }
+
+    /** Build the fieldId-13 table attribute from gastos. Returns [attr, fileCount]. */
+    private static function tableAttribute(iterable $gastos, array $filesByGastoId): array
+    {
+        $tabla = config('smartker.tabla');
+        $types = config('smartker.field_types');
+        $cols  = $tabla['columns'];
+
+        $cells = [];
+        $fileCount = 0;
+        $row = 0;
+
+        foreach ($gastos as $g) {
+            $row++;
+            $files = $filesByGastoId[$g->id] ?? [];
+            $pdf = $files['pdf'] ?? '';
+            $xml = $files['xml'] ?? '';
+            if ($pdf) $fileCount++;
+            if ($xml) $fileCount++;
+
+            $cells[] = self::cell($cols['categoria'], $row, $g->categoria ?? '', $types);
+            $cells[] = self::cell($cols['pdf'], $row, $pdf, $types);
+            $cells[] = self::cell($cols['xml'], $row, $xml, $types);
+            $cells[] = self::cell($cols['justificacion'], $row, $g->justificacion ?? '', $types);
+            $cells[] = self::cell($cols['cantidad'], $row, '1', $types);
+            $cells[] = self::cell($cols['importe'], $row, self::num($g->total), $types);
         }
-        return $out;
+
+        return [[
+            'fieldId'         => $tabla['fieldId'],
+            'value'           => '',
+            'tableAttributes' => $cells,
+        ], $fileCount];
     }
 
     private static function attr(int $fieldId, mixed $value): array

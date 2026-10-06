@@ -55,37 +55,56 @@ return [
 
     /*
     |----------------------------------------------------------------------
-    | Field map. Change these ids when Smartker assigns the real ones.
+    | Field maps — one per flow. Keys are logical names; values are the
+    | Smartker fieldIds. Order here is the order emitted in the payload.
+    | The gastos table ('tabla') only exists on the comprobación flow.
     |----------------------------------------------------------------------
     */
     'fields' => [
 
-        // Shared attributes (one per field).
-        'shared' => [
-            'nombre_empleado' => 1,
-            'numero_empleado' => 2,
-            'fecha_solicitud' => 3,
+        'comprobacion' => [
+            'numero_empleado' => 1,
+            'nombre_empleado' => 2,
+            'desde'           => 3,
+            'hasta'           => 30,
+            'folio_anticipo'  => 31,
+            'tipo_gasto'      => 32,
+            'observaciones'   => 33,
             'departamento'    => 4,
             'centro_costos'   => 5,
             'clabe'           => 6,
-            'sucursal_cedis'  => 7,
+            'sucursal'        => 7,
             'banco'           => 8,
+            'tabla'           => true,   // fieldId 13, built from gastos (comprobación only)
+            'monto'           => 14,
         ],
 
-        // Grand total (monto de la comprobación / del anticipo).
-        'monto_total' => 14,
+        'anticipo' => [
+            'numero_empleado' => 18,
+            'nombre_empleado' => 19,
+            'desde'           => 20,
+            'hasta'           => 21,
+            'tipo_gasto'      => 22,
+            'observaciones'   => 23,
+            'departamento'    => 24,
+            'centro_costos'   => 25,
+            'clabe'           => 26,
+            'sucursal'        => 27,
+            'banco'           => 28,
+            'monto'           => 29,
+        ],
+    ],
 
-        // Gastos table.
-        'tabla' => [
-            'fieldId' => 13,
-            'columns' => [
-                'categoria'     => ['id' => 9,  'type' => 'text'],
-                'pdf'           => ['id' => 10, 'type' => 'file'],
-                'xml'           => ['id' => 11, 'type' => 'file'],
-                'justificacion' => ['id' => 12, 'type' => 'text'],
-                'cantidad'      => ['id' => 15, 'type' => 'text'],  // "1" per line in the sample
-                'importe'       => ['id' => 16, 'type' => 'text'],
-            ],
+    // Gastos table (comprobación): fieldId 13 + its column fieldIds.
+    'tabla' => [
+        'fieldId' => 13,
+        'columns' => [
+            'categoria'     => ['id' => 9,  'type' => 'text'],
+            'pdf'           => ['id' => 10, 'type' => 'file'],
+            'xml'           => ['id' => 11, 'type' => 'file'],
+            'justificacion' => ['id' => 12, 'type' => 'text'],
+            'cantidad'      => ['id' => 15, 'type' => 'text'],  // "1" per line in the sample
+            'importe'       => ['id' => 16, 'type' => 'text'],
         ],
     ],
 
