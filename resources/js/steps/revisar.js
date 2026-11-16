@@ -7,7 +7,7 @@
    ========================================================================== */
 
 export function initRevisar(Lx) {
-  const panel = document.querySelector('[data-step="4"]');
+  const panel = document.querySelector('[data-step="revisar"]');
   if (!panel) return;
 
   const q = (s) => panel.querySelector(s);
@@ -89,7 +89,7 @@ export function initRevisar(Lx) {
     }
   }
 
-  Lx.Wizard.registerStep(4, {
+  Lx.Wizard.registerStep('revisar', {
     onEnter(state) {
       fillSummary(state);
       applyFlow(state);

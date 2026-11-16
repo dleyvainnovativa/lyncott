@@ -20,13 +20,14 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import * as bootstrap from 'bootstrap';
 import '../css/theme.css';
+import '../css/shell.css';
 
 import { Wizard } from './wizard.js';
-import { initFlujo } from './steps/flujo.js';
 import { initSolicitante } from './steps/solicitante.js';
 import { initViaje } from './steps/viaje.js';
 import { initGastos } from './steps/gastos.js';
 import { initRevisar } from './steps/revisar.js';
+import { initFlowNav } from './steps/flownav.js';
 
 window.bootstrap = bootstrap;
 
@@ -236,11 +237,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Boot the wizard if its shell is present on the page.
   const shell = document.getElementById('lxWizard');
   if (shell) {
-    initFlujo(Lx);         // step 0 registers its hooks
-    initSolicitante(Lx);   // step 1 registers its hooks
-    initViaje(Lx);         // step 2 registers its hooks
-    initGastos(Lx);        // step 3 registers its hooks
-    initRevisar(Lx);       // step 4 registers its hooks + submit
+    Wizard.state.flujo = window.LX_FLUJO || Wizard.state.flujo;
+    initSolicitante(Lx);   // registers the "solicitante" step
+    initViaje(Lx);         // registers the "viaje" step
+    initGastos(Lx);        // registers "gastos" (absent on the anticipo page)
+    initRevisar(Lx);       // registers "revisar" + submit
+    initFlowNav(Lx);       // sidebar/offcanvas flow-switch warning
     Wizard.init(shell);
   }
 });

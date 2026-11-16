@@ -8,35 +8,44 @@ use Illuminate\Support\Facades\Route;
 | Web Routes — Lyncott Comprobación de Gastos
 |--------------------------------------------------------------------------
 |
-| Phase 1 wires the wizard shell only. The endpoints the later phases need
-| are declared here as a group so the front end has stable URLs to call;
-| their controller methods are stubbed until their phase lands.
+| Welcome landing on '/', then one page per flow with the sidebar shell.
+| The flow is fixed by the route (no in-wizard picker). Switching flows is a
+| full navigation, so the sidebar warns before leaving.
 |
 */
 
-// The wizard (single-page, 4-step).
-Route::get('/', [ComprobacionController::class, 'index'])->name('comprobacion.index');
+// Welcome / landing page with the two flow options.
+Route::get('/', [ComprobacionController::class, 'welcome'])->name('welcome');
+
+// One page per flow (sidebar shell + paginated steps).
+Route::get('/anticipo', [ComprobacionController::class, 'flujo'])
+    ->defaults('flujo', 'anticipo')->name('flujo.anticipo');
+Route::get('/comprobacion', [ComprobacionController::class, 'flujo'])
+    ->defaults('flujo', 'comprobacion')->name('flujo.comprobacion');
+
+// Legacy entry point — redirect old links to the comprobación flow. The name
+// is kept so any lingering route('comprobacion.index') still resolves.
+Route::get('/solicitud', fn () => redirect()->route('flujo.comprobacion'))
+    ->name('comprobacion.index');
 
 /*
-| JSON endpoints consumed by resources/js. Kept on the web middleware group
-| so they share the session + CSRF token with the Blade views (no api:install
-| needed for the demo). Uncomment / implement per phase.
+| JSON endpoints consumed by resources/js. Unchanged.
 */
 Route::prefix('api')->name('api.')->group(function () {
 
-    // Phase 2 — Datos del Solicitante: match número/RFC -> employee data.
+    // Datos del Solicitante: match número/RFC -> employee data.
     Route::post('/empleado/buscar', [ComprobacionController::class, 'buscarEmpleado'])
         ->name('empleado.buscar');
 
-    // Phase 4 — parse an uploaded CFDI 4.0 XML server-side (fallback/validation).
+    // Parse an uploaded CFDI 4.0 XML server-side (fallback/validation).
     Route::post('/cfdi/parse', [ComprobacionController::class, 'parseCfdi'])
         ->name('cfdi.parse');
 
-    // Phase 5 — render the Lyncott PDF for the review preview.
+    // Render the Lyncott PDF for the review preview.
     Route::post('/comprobacion/pdf', [ComprobacionController::class, 'previewPdf'])
         ->name('comprobacion.pdf');
 
-    // Phase 5 — build + persist the Smartker payload (stubbed send).
+    // Build + persist the Smartker payload (stubbed send).
     Route::post('/comprobacion/enviar', [ComprobacionController::class, 'enviar'])
         ->name('comprobacion.enviar');
 });

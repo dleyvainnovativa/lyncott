@@ -1,13 +1,17 @@
 /* ==========================================================================
    Lyncott — wizard.js
-   Multi-step wizard state machine with conditional (skippable) steps.
+   Multi-step wizard state machine, paginated (one step visible at a time).
 
-   Steps register behavior without touching this file:
-       Wizard.registerStep(index, {
+   The flow (anticipo | comprobacion) is fixed by the page and read from
+   window.LX_FLUJO — there is no in-wizard flow picker anymore. The step
+   sequence is built from the [data-step="<name>"] panels present in the DOM,
+   so the anticipo page simply omits the "gastos" panel.
+
+   Steps register behavior by NAME, without touching this file:
+       Wizard.registerStep('solicitante', {
          onEnter(state) {},        // when the step becomes visible
          validate(state) {},       // falsy/throw blocks "Siguiente"
          collect(state) {},        // push this step's data into state
-         skip(state) { return bool }, // when true, the step is skipped + dimmed
        });
    And the final handler:
        Wizard.onSubmit = async (state) => { ... };
@@ -16,11 +20,12 @@
 export const Wizard = {
   shell: null,
   index: 0,
-  steps: [],
-  stepperItems: [],
-  hooks: {},
+  order: [],          // step names, in DOM order
+  panels: {},         // name -> panel element
+  stepperItems: {},   // name -> stepper <li>
+  hooks: {},          // name -> hook object
   state: {
-    flujo: 'anticipo',   // default selection; 'anticipo' | 'comprobacion'
+    flujo: 'comprobacion',   // overridden from window.LX_FLUJO in init()
     solicitante: {},
     viaje: {},
     gastos: [],
@@ -30,47 +35,56 @@ export const Wizard = {
 
   init(shell) {
     this.shell = shell;
-    this.steps = [...shell.querySelectorAll('[data-step]')];
-    this.stepperItems = [...document.querySelectorAll('.lx-steps li')];
+    this.state.flujo = window.LX_FLUJO || this.state.flujo;
+
+    const panels = [...shell.querySelectorAll('[data-step]')];
+    this.order = panels.map((p) => p.dataset.step);
+    panels.forEach((p) => { this.panels[p.dataset.step] = p; });
+
+    // Stepper <li> use data-stepper (NOT data-step) so they don't collide
+    // with the step panels when a module queries [data-step="<name>"].
+    document.querySelectorAll('.lx-steps li[data-stepper]').forEach((li) => {
+      this.stepperItems[li.dataset.stepper] = li;
+    });
 
     shell.querySelectorAll('[data-wizard-next]').forEach((b) =>
       b.addEventListener('click', () => this.next(b)));
     shell.querySelectorAll('[data-wizard-prev]').forEach((b) =>
       b.addEventListener('click', () => this.prev()));
-    this.stepperItems.forEach((li, i) =>
-      li.addEventListener('click', () => { if (i < this.index && this.enabled(i)) this.go(i); }));
+
+    // Stepper: click a completed step to jump back to it.
+    this.order.forEach((name, i) => {
+      const li = this.stepperItems[name];
+      if (li) li.addEventListener('click', () => { if (i < this.index) this.go(i); });
+    });
 
     this.go(0);
   },
 
-  registerStep(index, hook) {
-    this.hooks[index] = { ...(this.hooks[index] || {}), ...hook };
-  },
-
-  /** A step is enabled unless its hook's skip(state) says otherwise. */
-  enabled(i) {
-    const h = this.hooks[i];
-    return !(h && typeof h.skip === 'function' && h.skip(this.state));
+  registerStep(name, hook) {
+    this.hooks[name] = { ...(this.hooks[name] || {}), ...hook };
   },
 
   go(i) {
-    if (i < 0 || i >= this.steps.length) return;
+    if (i < 0 || i >= this.order.length) return;
     this.index = i;
-    this.steps.forEach((p, idx) => { p.hidden = idx !== i; });
-    this.stepperItems.forEach((li, idx) => {
-      const enabled = this.enabled(idx);
-      // Skipped steps are hidden from the stepper entirely (not just dimmed).
-      li.hidden = !enabled;
+
+    this.order.forEach((name, idx) => { this.panels[name].hidden = idx !== i; });
+    this.order.forEach((name, idx) => {
+      const li = this.stepperItems[name];
+      if (!li) return;
       li.classList.toggle('is-active', idx === i);
-      li.classList.toggle('is-done', idx < i && enabled);
-      li.style.cursor = (idx < i && enabled) ? 'pointer' : 'default';
+      li.classList.toggle('is-done', idx < i);
+      li.style.cursor = idx < i ? 'pointer' : 'default';
     });
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    this.hooks[i]?.onEnter?.(this.state);
+    this.hooks[this.order[i]]?.onEnter?.(this.state);
   },
 
   async next(btn) {
-    const hook = this.hooks[this.index];
+    const name = this.order[this.index];
+    const hook = this.hooks[name];
     if (hook?.validate) {
       try {
         const ok = await (btn && window.Lx
@@ -81,16 +95,13 @@ export const Wizard = {
     }
     hook?.collect?.(this.state);
 
-    let n = this.index + 1;
-    while (n < this.steps.length && !this.enabled(n)) n++;
-    if (n < this.steps.length) this.go(n);
+    const n = this.index + 1;
+    if (n < this.order.length) this.go(n);
     else this.submit(btn);
   },
 
   prev() {
-    let p = this.index - 1;
-    while (p >= 0 && !this.enabled(p)) p--;
-    if (p >= 0) this.go(p);
+    if (this.index > 0) this.go(this.index - 1);
   },
 
   async submit(btn) {

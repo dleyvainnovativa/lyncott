@@ -1,0 +1,87 @@
+/* ==========================================================================
+   Lyncott — shell.css
+   Flow layout: red sidebar (desktop) + mobile topbar & offcanvas + content.
+   Loaded through app.js alongside theme.css. The sidebar red stays constant
+   across light/dark (brand), so its internals use explicit colors, not tokens.
+   ========================================================================== */
+
+.lx-shell-body { margin: 0; }
+
+/* ---------- Mobile topbar ---------- */
+.lx-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; background: var(--lx-red); color: #fff;
+  position: sticky; top: 0; z-index: 1030; box-shadow: var(--lx-shadow-lg);
+}
+.lx-topbar__logo { display: inline-flex; align-items: center; text-decoration: none; }
+.lx-topbar__logo img { height: 28px; width: auto; filter: brightness(0) invert(1); }
+.lx-topbar__logo span { font-weight: 800; color: #fff; font-size: 1.1rem; }
+.lx-topbar__burger {
+  border: 0; background: rgba(255,255,255,.14); color: #fff;
+  width: 42px; height: 42px; border-radius: 10px; font-size: 1.15rem;
+  display: grid; place-items: center; cursor: pointer; transition: background .15s;
+}
+.lx-topbar__burger:hover { background: rgba(255,255,255,.26); }
+
+/* ---------- Shell layout ---------- */
+.lx-shell { display: flex; align-items: flex-start; min-height: 100vh; min-height: 100dvh; }
+.lx-sidebar {
+  display: none; flex: 0 0 300px; width: 300px;
+  background: var(--lx-red); color: #fff;
+  position: sticky; top: 0; align-self: stretch;
+  height: 100vh; height: 100dvh; overflow-y: auto;
+}
+.lx-shell__main { flex: 1 1 auto; min-width: 0; }
+.lx-shell__content { max-width: 1040px; margin: 0 auto; padding: clamp(22px, 3vw, 34px) clamp(16px, 4vw, 40px) 72px; }
+
+/* ---------- Offcanvas (mobile) ---------- */
+.lx-offcanvas { background: var(--lx-red); color: #fff; width: min(300px, 85vw); }
+.lx-offcanvas .offcanvas-body { padding: 0; overflow-y: auto; }
+
+/* ---------- Flow nav (shared by sidebar + offcanvas) ---------- */
+.lx-flownav { display: flex; flex-direction: column; min-height: 100%; padding: 26px 22px 22px; }
+.lx-flownav__logo { display: inline-flex; margin-bottom: 26px; text-decoration: none; }
+.lx-flownav__logo img { height: 42px; width: auto; filter: brightness(0) invert(1); }
+.lx-flownav__logo span { font-weight: 800; color: #fff; font-size: 1.4rem; }
+.lx-flownav__title { font-size: 1.3rem; font-weight: 800; line-height: 1.2; margin: 0 0 10px; color: #fff; }
+.lx-flownav__desc { font-size: .85rem; line-height: 1.55; color: rgba(255,255,255,.82); margin: 0 0 24px; }
+
+.lx-flownav__nav { display: flex; flex-direction: column; gap: 12px; }
+.lx-flownav__card {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left;
+  padding: 14px; border-radius: 12px; cursor: pointer; font: inherit; color: #fff;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16);
+  transition: background .15s, border-color .15s, transform .15s;
+}
+button.lx-flownav__card:hover {
+  background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.32); transform: translateY(-1px);
+}
+.lx-flownav__card.is-active {
+  background: #fff; color: #b41e29; border-color: #fff; cursor: default;
+  box-shadow: 0 10px 26px -12px rgba(0,0,0,.5);
+}
+.lx-flownav__ico {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px;
+  display: grid; place-items: center; font-size: 1.05rem;
+  background: rgba(255,255,255,.18); color: #fff;
+}
+.lx-flownav__card.is-active .lx-flownav__ico { background: rgba(212,37,49,.12); color: var(--lx-red); }
+.lx-flownav__txt { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.lx-flownav__t { font-weight: 700; font-size: .95rem; }
+.lx-flownav__d { font-size: .78rem; line-height: 1.4; opacity: .86; }
+.lx-flownav__card.is-active .lx-flownav__d { opacity: .72; }
+.lx-flownav__on { color: var(--lx-red); font-size: 1rem; margin-top: 2px; }
+.lx-flownav__go { color: rgba(255,255,255,.7); font-size: .9rem; margin-top: 3px; }
+
+.lx-flownav__home {
+  margin-top: auto; padding-top: 22px;
+  display: inline-flex; align-items: center; gap: 8px;
+  color: rgba(255,255,255,.82); text-decoration: none; font-size: .85rem; font-weight: 600;
+}
+.lx-flownav__home:hover { color: #fff; }
+
+/* ---------- Breakpoint ---------- */
+@media (min-width: 992px) {
+  .lx-topbar { display: none; }
+  .lx-sidebar { display: flex; }
+}

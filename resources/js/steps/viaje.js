@@ -26,7 +26,7 @@ const FLOW = {
 };
 
 export function initViaje(Lx) {
-  const panel = document.querySelector('[data-step="2"]');
+  const panel = document.querySelector('[data-step="viaje"]');
   if (!panel) return;
 
   const el = (id) => panel.querySelector('#' + id);
@@ -93,7 +93,7 @@ export function initViaje(Lx) {
   function clearInvalid() { panel.querySelectorAll('.is-invalid').forEach((n) => n.classList.remove('is-invalid')); }
   const fail = (node, msg) => { node.classList.add('is-invalid'); node.focus(); Lx.toast.error(msg); return false; };
 
-  Lx.Wizard.registerStep(2, {
+  Lx.Wizard.registerStep('viaje', {
     onEnter(state) {
       applyFlow(state);
       // Prefill pago/centro from the employee if empty.

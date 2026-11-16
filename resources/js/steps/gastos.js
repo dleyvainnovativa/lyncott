@@ -10,7 +10,7 @@
    ========================================================================== */
 
 export function initGastos(Lx) {
-  const panel = document.querySelector('[data-step="3"]');
+  const panel = document.querySelector('[data-step="gastos"]');
   if (!panel) return;
 
   const CATS = Array.isArray(window.LX_CATS) && window.LX_CATS.length
@@ -237,9 +237,7 @@ export function initGastos(Lx) {
   });
 
   /* ---- wizard hook ---- */
-  Lx.Wizard.registerStep(3, {
-    // Skipped entirely for the anticipo flow.
-    skip(state) { return state.flujo === 'anticipo'; },
+  Lx.Wizard.registerStep('gastos', {
     onEnter(state) {
       if (Array.isArray(state.gastos) && state.gastos.length && !data.length) {
         data = state.gastos;

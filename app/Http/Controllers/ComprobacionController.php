@@ -20,6 +20,26 @@ use Illuminate\View\View;
 
 class ComprobacionController extends Controller
 {
+    /** Landing page with the two flow options (anticipo / comprobación). */
+    public function welcome(): View
+    {
+        return view('bienvenida');
+    }
+
+    /** Flow shell (sidebar + paginated steps). $flujo comes from the route. */
+    public function flujo(string $flujo): View
+    {
+        abort_unless(in_array($flujo, ['anticipo', 'comprobacion'], true), 404);
+
+        return view('comprobacion.flujo', [
+            'flujo'       => $flujo,
+            'categorias'  => config('smartker.categorias', []),
+            'centros'     => $this->centrosCosto(),
+            'tiposGasto'  => $this->tiposGasto(),
+            'bancos'      => Banco::where('activo', true)->orderBy('nombre')->get(['clave', 'nombre']),
+        ]);
+    }
+
     public function index(): View
     {
         return view('comprobacion.index', [

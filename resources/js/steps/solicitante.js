@@ -6,7 +6,7 @@
    ========================================================================== */
 
 export function initSolicitante(Lx) {
-  const panel = document.querySelector('[data-step="1"]');
+  const panel = document.querySelector('[data-step="solicitante"]');
   if (!panel) return;
 
   const numero = panel.querySelector('#numero_empleado');
@@ -52,7 +52,7 @@ export function initSolicitante(Lx) {
     if (e.key === 'Enter') { e.preventDefault(); buscar(); }
   });
 
-  Lx.Wizard.registerStep(1, {
+  Lx.Wizard.registerStep('solicitante', {
     validate() {
       if (!empleado) { Lx.toast.error('Primero valida al empleado con «Buscar».'); return false; }
       return true;
