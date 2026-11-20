@@ -4,282 +4,174 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page {
-            margin: 28px 32px;
+        @page { margin: 26px 30px; }
+
+        * { font-family: 'DejaVu Sans', sans-serif; }
+
+        body { color: #111; font-size: 9px; }
+
+        .muted { color: #555; }
+        .right { text-align: right; }
+        .center { text-align: center; }
+        .b { font-weight: bold; }
+
+        /* ---- Header ---- */
+        .hdr { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        .hdr td { vertical-align: top; }
+        .company { font-size: 8px; color: #222; }
+        .logo { height: 40px; margin-top: 6px; }
+        .brandword { font-size: 20px; font-weight: bold; color: #d42531; font-style: italic; }
+        .title { font-size: 13px; font-weight: bold; letter-spacing: .5px; padding-top: 10px; }
+
+        table.meta { border-collapse: collapse; float: right; }
+        table.meta td { font-size: 8px; padding: 1px 2px; }
+        table.meta td.k { color: #333; padding-right: 8px; }
+        table.meta td.v { font-weight: bold; }
+
+        .compby { font-size: 9px; margin: 8px 0 2px; }
+        .compby .b { text-transform: uppercase; }
+
+        /* ---- Section bar ---- */
+        .secbar {
+            background: #eee; border: 1px solid #ccc; font-weight: bold;
+            font-size: 9px; padding: 3px 6px; margin-top: 6px;
         }
 
-        * {
-            font-family: 'DejaVu Sans', sans-serif;
+        /* ---- Tables ---- */
+        table.data { width: 100%; border-collapse: collapse; margin-top: 2px; }
+        table.data thead { display: table-header-group; }
+        table.data th {
+            font-size: 8px; text-align: left; border-bottom: 1px solid #333;
+            padding: 3px 4px; background: #fafafa;
         }
+        table.data td { font-size: 7.5px; padding: 2px 4px; border-bottom: 1px solid #eee; vertical-align: top; }
+        table.data tr { page-break-inside: avoid; }
+        td.uuid { font-family: 'DejaVu Sans Mono', monospace; word-break: break-all; }
+        td.num { font-family: 'DejaVu Sans Mono', monospace; }
 
-        body {
-            color: #1c1a19;
-            font-size: 10px;
-        }
+        .totrow td { border-top: 2px solid #333; border-bottom: none; font-weight: bold; font-size: 9px; padding-top: 4px; }
 
-        .red {
-            color: #d42531;
-        }
+        /* ---- Signatures ---- */
+        .firmas { width: 100%; border-collapse: collapse; margin-top: 28px; }
+        .firmas td { width: 33.33%; text-align: center; font-size: 8px; padding-top: 2px; border-top: 1px solid #333; }
+        .coment { margin-top: 14px; font-size: 8px; color: #333; }
 
-        .bar {
-            background: #d42531;
-            color: #fff;
-            padding: 10px 14px;
-            border-radius: 6px;
-        }
-
-        .bar h1 {
-            margin: 0;
-            font-size: 15px;
-            letter-spacing: .5px;
-        }
-
-        .bar .sub {
-            font-size: 9px;
-            opacity: .9;
-            margin-top: 2px;
-        }
-
-        .meta {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 14px 0 6px;
-        }
-
-        .meta td {
-            padding: 3px 6px;
-            vertical-align: top;
-            font-size: 9.5px;
-        }
-
-        .meta .k {
-            color: #6c6763;
-            width: 16%;
-        }
-
-        .meta .v {
-            font-weight: bold;
-            width: 34%;
-        }
-
-        h2.cat {
-            background: #faf2f3;
-            color: #b41e29;
-            border-left: 3px solid #d42531;
-            padding: 5px 8px;
-            font-size: 10.5px;
-            margin: 14px 0 0;
-        }
-
-        table.g {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 2px;
-        }
-
-        table.g th {
-            background: #f0ece8;
-            color: #6c6763;
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: .4px;
-            text-align: left;
-            padding: 5px 7px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        table.g td {
-            padding: 5px 7px;
-            border-bottom: 1px solid #efece9;
-            font-size: 9px;
-        }
-
-        table.g td.n,
-        table.g th.n {
-            text-align: right;
-        }
-
-        .concept {
-            color: #9a938d;
-            font-size: 7.5px;
-        }
-
-        tr.sub td {
-            font-weight: bold;
-            background: #fbfafa;
-            border-top: 1px solid #ddd;
-        }
-
-        .grand {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 16px;
-        }
-
-        .grand td {
-            padding: 7px 10px;
-            font-size: 11px;
-        }
-
-        .grand .tot {
-            background: #1c1a19;
-            color: #fff;
-            font-weight: bold;
-            text-align: right;
-        }
-
-        .grand .lab {
-            text-align: right;
-            color: #6c6763;
-        }
-
-        .firmas {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 40px;
-        }
-
-        .firmas td {
-            width: 33.33%;
-            text-align: center;
-            font-size: 9px;
-            padding: 0 14px;
-        }
-
-        .firmas .line {
-            border-top: 1px solid #1c1a19;
-            margin: 0 6px 5px;
-            padding-top: 4px;
-        }
-
-        .firmas .role {
-            color: #6c6763;
-            text-transform: uppercase;
-            letter-spacing: .6px;
-            font-size: 8px;
-        }
-
-        .foot {
-            margin-top: 18px;
-            font-size: 7.5px;
-            color: #9a938d;
-            text-align: center;
-        }
-
-        .empty {
-            padding: 10px;
-            color: #9a938d;
-            font-style: italic;
-            font-size: 9px;
-        }
+        /* ---- Póliza ---- */
+        .poliza-wrap { page-break-before: always; }
+        .poliza-title { text-align: center; font-weight: bold; font-size: 11px; margin: 2px 0 8px; }
     </style>
 </head>
 
 <body>
 
-    @if (!empty($logo))
-    <div style="margin-bottom:10px">
-        <img src="{{ $logo }}" alt="Lyncott" style="height:40px;">
-    </div>
-    @endif
-
-    <div class="bar">
-        <h1>DETALLE DE GASTOS — VIAJE NACIONAL</h1>
-        <div class="sub">Lyncott · Comprobación de gastos de viaje</div>
-    </div>
-
-    <table class="meta">
+    {{-- ======================= HEADER ======================= --}}
+    <table class="hdr">
         <tr>
-            <td class="k">Empleado</td>
-            <td class="v">{{ $m['nombre'] }}</td>
-            <td class="k">No. empleado</td>
-            <td class="v">{{ $m['numero'] }}</td>
-        </tr>
-        <tr>
-            <td class="k">Departamento</td>
-            <td class="v">{{ $m['departamento'] ?: '—' }}</td>
-            <td class="k">Centro de costos</td>
-            <td class="v">{{ $m['centro_costos'] ?: '—' }}</td>
-        </tr>
-        <tr>
-            <td class="k">Periodo</td>
-            <td class="v">{{ $m['periodo'] }}</td>
-        </tr>
-        <tr>
-            <td class="k">Folio anticipo</td>
-            <td class="v">{{ $m['folio_anticipo'] ?: '—' }}</td>
-            <td class="k">Fecha elaboración</td>
-            <td class="v">{{ $m['fecha'] }} · MXN</td>
+            <td style="width:40%">
+                <div class="company">{{ $meta['empresa'] }}</div>
+                @if ($logo)
+                    <img class="logo" src="{{ $logo }}" alt="Lyncott">
+                @else
+                    <div class="brandword">Lyncott</div>
+                @endif
+            </td>
+            <td style="width:24%" class="center">
+                <div class="title">{{ $meta['titulo'] }}</div>
+            </td>
+            <td style="width:36%">
+                <table class="meta">
+                    <tr><td class="k">Sucursal</td><td class="v">{{ $meta['sucursal'] }}</td></tr>
+                    <tr><td class="k">Documento</td><td class="v">{{ $meta['documento'] }}</td></tr>
+                    <tr><td class="k">Fecha</td><td class="v">{{ $meta['fecha'] }}</td></tr>
+                    <tr><td class="k">Moneda</td><td class="v">{{ $meta['moneda'] }}</td></tr>
+                    <tr><td class="k">DoctoPrv</td><td class="v">{{ $meta['docto_prv'] }}</td></tr>
+                    <tr><td class="k">Referencia</td><td class="v">{{ $meta['referencia'] }}</td></tr>
+                    <tr><td class="k">Fecha de Pago</td><td class="v">{{ $meta['fecha_pago'] ?: '—' }}</td></tr>
+                </table>
+            </td>
         </tr>
     </table>
 
-    @forelse ($grupos as $grupo)
-    <h2 class="cat">{{ $grupo['categoria'] ?: 'SIN CATEGORÍA' }}</h2>
-    <table class="g">
+    <div class="compby">
+        <span class="muted">Gastos comprobados por:</span>
+        <span class="b">{{ $meta['comprobado_por'] }}</span>
+    </div>
+
+    {{-- ================== RELACIÓN DE FACTURAS ================== --}}
+    <div class="secbar">RELACIÓN DE FACTURAS</div>
+    <table class="data">
         <thead>
             <tr>
-                <th style="width:12%">Fecha</th>
-                <th style="width:30%">No. DOC / Concepto</th>
-                <th style="width:18%">RFC</th>
-                <th class="n" style="width:13%">Importe</th>
-                <th class="n" style="width:13%">IVA</th>
-                <th class="n" style="width:14%">Total</th>
+                <th style="width:3%">#</th>
+                <th style="width:10%">Fecha</th>
+                <th style="width:16%">RFC Emisor</th>
+                <th style="width:38%">UUID</th>
+                <th style="width:12%" class="right">Importe</th>
+                <th style="width:21%">Razón Social</th>
             </tr>
         </thead>
         <tbody>
-            @foreach ($grupo['rows'] as $r)
-            <tr>
-                <td>{{ $r['fecha'] }}</td>
-                <td>{{ $r['nodoc'] }}@if($r['concepto'])<div class="concept">{{ $r['concepto'] }}</div>@endif</td>
-                <td>{{ $r['rfc'] }}</td>
-                <td class="n">{{ $r['importe'] }}</td>
-                <td class="n">{{ $r['iva'] }}</td>
-                <td class="n">{{ $r['total'] }}</td>
-            </tr>
-            @endforeach
-            <tr class="sub">
-                <td colspan="5" class="n">Subtotal {{ $grupo['categoria'] }}</td>
-                <td class="n">{{ $grupo['subtotal'] }}</td>
+            @forelse ($relacion as $r)
+                <tr>
+                    <td class="num">{{ $r['n'] }}</td>
+                    <td class="num">{{ $r['fecha'] }}</td>
+                    <td class="num">{{ $r['rfc'] }}</td>
+                    <td class="uuid">{{ $r['uuid'] }}</td>
+                    <td class="right num">{{ $money($r['importe']) }}</td>
+                    <td>{{ $r['razon'] }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="6" class="center muted" style="padding:10px">Sin facturas capturadas.</td></tr>
+            @endforelse
+            <tr class="totrow">
+                <td colspan="4" class="right">Importe Total</td>
+                <td class="right num">{{ $money($importe_total) }}</td>
+                <td></td>
             </tr>
         </tbody>
     </table>
-    @empty
-    <div class="empty">No hay gastos capturados.</div>
-    @endforelse
 
-    <table class="grand">
-        <tr>
-            <td class="lab" style="width:70%">Importe</td>
-            <td class="tot" style="width:30%">{{ $tot['importe'] }}</td>
-        </tr>
-        <tr>
-            <td class="lab">IVA</td>
-            <td class="tot">{{ $tot['iva'] }}</td>
-        </tr>
-        <tr>
-            <td class="lab" style="font-size:12px;color:#1c1a19;font-weight:bold">TOTAL COMPROBACIÓN</td>
-            <td class="tot" style="font-size:12px">{{ $tot['total'] }}</td>
-        </tr>
-    </table>
+    <div class="coment"><span class="muted">Comentarios:</span></div>
 
     <table class="firmas">
         <tr>
-            <td>
-                <div class="line">{{ $m['nombre'] }}</div>
-                <div class="role">Elaboró</div>
-            </td>
-            <td>
-                <div class="line">&nbsp;</div>
-                <div class="role">Revisó</div>
-            </td>
-            <td>
-                <div class="line">&nbsp;</div>
-                <div class="role">Autorizó</div>
-            </td>
+            <td>ELABORÓ</td>
+            <td>REVISÓ</td>
+            <td>AUTORIZÓ</td>
         </tr>
     </table>
 
-    <div class="foot">Documento generado por la plataforma de comprobación de gastos · {{ $m['fecha'] }}</div>
+    {{-- ===================== PÓLIZA CONTABLE ===================== --}}
+    <div class="poliza-wrap">
+        <div class="poliza-title">PÓLIZA CONTABLE</div>
+        <div class="b" style="font-size:9px; margin-bottom:4px">Póliza {{ $meta['poliza_num'] }}</div>
+
+        <table class="data">
+            <thead>
+                <tr>
+                    <th style="width:18%">Número</th>
+                    <th style="width:52%">Cuenta</th>
+                    <th style="width:15%" class="right">Debe</th>
+                    <th style="width:15%" class="right">Haber</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($poliza as $row)
+                    <tr>
+                        <td class="num">{{ $row['numero'] }}</td>
+                        <td>{{ $row['cuenta'] }}</td>
+                        <td class="right num">{{ (float) $row['debe'] != 0.0 ? $money($row['debe']) : '' }}</td>
+                        <td class="right num">{{ (float) $row['haber'] != 0.0 ? $money($row['haber']) : '' }}</td>
+                    </tr>
+                @endforeach
+                <tr class="totrow">
+                    <td colspan="2" class="right">Sumas</td>
+                    <td class="right num">{{ $money($sumas['debe']) }}</td>
+                    <td class="right num">{{ $money($sumas['haber']) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 </body>
 

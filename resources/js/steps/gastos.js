@@ -34,15 +34,16 @@ export function initGastos(Lx) {
 
   /* ---- tarjetas assigned to the logged-in employee (from the lookup) ---- */
   const cards = () => (Lx.Wizard.state.tarjetas || []).filter((t) => t && t.numero);
-  const last4 = (n) => (String(n || '').replace(/\D/g, '').slice(-4) || '····');
-  const cardLabel = (c) => `${c.nombre} ·· ${last4(c.numero)}`;
+  // Full card label: name + number (+ type), so the whole card data is visible.
+  const cardLabel = (c) => `${c.nombre} · ${c.numero || '—'}${c.tipo ? ` (${c.tipo})` : ''}`;
   function cardCell(r, cs) {
     if (cs.length === 1) {
-      return `<td data-label="Tarjeta"><span class="lx-mono" style="font-size:.8rem" title="${esc(cs[0].numero || '')}">${esc(cardLabel(cs[0]))}</span></td>`;
+      const c = cs[0];
+      return `<td data-label="Tarjeta"><span class="lx-cardlbl" title="${esc(c.numero || '')}">${esc(cardLabel(c))}</span></td>`;
     }
-    const opts = '<option value="">— selecciona —</option>' +
+    const opts = '<option value="">— selecciona tarjeta —</option>' +
       cs.map((c) => `<option value="${c.id}" ${String(r.tarjeta_id) === String(c.id) ? 'selected' : ''}>${esc(cardLabel(c))}</option>`).join('');
-    return `<td data-label="Tarjeta"><select class="lx-tarjeta form-select form-select-sm" data-id="${r.id}" aria-label="Tarjeta">${opts}</select></td>`;
+    return `<td data-label="Tarjeta"><select class="lx-tarjeta form-select form-select-sm lx-cardsel" data-id="${r.id}" aria-label="Tarjeta">${opts}</select></td>`;
   }
 
   /* ---- categoría auto-suggest (demo heuristic; real map in config/smartker.php) ---- */

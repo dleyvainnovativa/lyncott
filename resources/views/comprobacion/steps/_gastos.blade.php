@@ -1,4 +1,11 @@
 {{-- STEP 3 · Gestión de gastos (Phase 4) --}}
+<style>
+    /* Card column: wide enough to show the full card label (name + number). */
+    .lx-cardsel { min-width: 260px; max-width: 360px; font-size: .82rem; }
+    .lx-cardlbl { font-family: 'JetBrains Mono', monospace; font-size: .78rem; white-space: nowrap; }
+    th.js-card-col { min-width: 260px; }
+    .lx-table td[data-label="Tarjeta"] { white-space: nowrap; }
+</style>
 <div class="lx-panel-head">
     <span class="lx-ico"><i class="fa-solid fa-file-invoice-dollar"></i></span>
     <div>

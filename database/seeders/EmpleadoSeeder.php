@@ -3633,6 +3633,7 @@ class EmpleadoSeeder extends Seeder
                         'cardholder_rfc' => 'LOHJ710627TL5',
                         'activa' => true,
                     ],
+
                 ],
             ],
             [

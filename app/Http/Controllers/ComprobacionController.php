@@ -212,8 +212,12 @@ class ComprobacionController extends Controller
                     ];
                 }
 
-                // Principal file = the generated Lyncott "DETALLE DE GASTOS" PDF.
-                $pdfData  = $this->buildPdfData($sol, $viaje, $gastos);
+                // Principal file = the generated Lyncott "COMPROBACION GASTOS" PDF.
+                $pdfData  = $this->buildPdfData($sol, $viaje, $gastos, [
+                    'folio'      => $comprobacion->folio(),
+                    'docto_prv'  => 'XA8001-' . str_pad((string) $comprobacion->id, 7, '0', STR_PAD_LEFT),
+                    'poliza_num' => 'D ' . str_pad((string) $comprobacion->id, 4, '0', STR_PAD_LEFT),
+                ]);
                 $pdfBytes = Pdf::loadView('pdf.detalle', $pdfData)->setPaper('letter')->output();
                 $principal = [
                     'fileName'  => 'comprobacion-' . $comprobacion->folio() . '.pdf',
@@ -326,65 +330,56 @@ class ComprobacionController extends Controller
         return $path;
     }
 
-    /** Group gastos by categoría and format for the PDF view. */
-    private function buildPdfData(array $sol, array $viaje, array $gastos): array
+    /**
+     * Build the ERP-style comprobación document: Relación de Facturas + Póliza Contable.
+     * $opts: ['folio' => ..., 'docto_prv' => ..., 'poliza_num' => ...] (optional).
+     */
+    private function buildPdfData(array $sol, array $viaje, array $gastos, array $opts = []): array
     {
-        $fmt = fn($n) => '$' . number_format((float) $n, 2);
-
         // Embed the Lyncott logo (red, original) as base64 so DomPDF can render it.
         $logoPath = public_path('img/logo.png');
         $logo = file_exists($logoPath)
             ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($logoPath))
             : null;
 
-        $grupos = [];
-        $totImporte = $totIva = $totTotal = 0.0;
+        $p = \App\Services\PolizaBuilder::build($gastos);
 
-        foreach ($gastos as $g) {
-            $cat   = $g['cat'] ?? 'SIN CATEGORÍA';
-            $tipo  = ($g['tipo'] ?? 'sf') === 'cf' ? 'cf' : 'sf';
-            $total = (float) ($g['total'] ?? 0);
-            $importe = $tipo === 'cf' ? round($total / 1.16, 2) : $total;
-            $iva     = $tipo === 'cf' ? round($total - $importe, 2) : 0.0;
+        // "Comprobado por" / Referencia: the card when there's a single one, else the employee.
+        $cards = array_values(array_unique(array_filter(array_map(
+            fn ($g) => trim((string) ($g['tarjeta_nombre'] ?? '')),
+            $gastos,
+        ))));
+        $comprobadoPor = count($cards) === 1 ? $cards[0] : ($sol['nombre_completo'] ?? '—');
 
-            $grupos[$cat] ??= ['categoria' => $cat, 'rows' => [], 'subtotal_n' => 0.0];
-            $grupos[$cat]['rows'][] = [
-                'fecha'    => $g['fecha'] ?? '—',
-                'nodoc'    => $tipo === 'cf' ? (substr((string) ($g['uuid'] ?? ''), 0, 8) ?: '—') : 'S/F',
-                'concepto' => $g['co'] ?? '',
-                'rfc'      => $g['rfc'] ?? '—',
-                'importe'  => $fmt($importe),
-                'iva'      => $fmt($iva),
-                'total'    => $fmt($total),
-            ];
-            $grupos[$cat]['subtotal_n'] += $total;
-            $totImporte += $importe;
-            $totIva     += $iva;
-            $totTotal   += $total;
-        }
-
-        foreach ($grupos as &$grupo) {
-            $grupo['subtotal'] = $fmt($grupo['subtotal_n']);
-        }
-        unset($grupo);
+        $moneda = match (strtolower((string) ($viaje['moneda'] ?? 'peso'))) {
+            'dolar' => 'DOLARES',
+            'euro'  => 'EUROS',
+            default => 'PESOS',
+        };
 
         return [
-            'logo' => $logo,
-            'm' => [
-                'nombre'        => $sol['nombre_completo'] ?? '—',
-                'numero'        => $sol['numero_empleado'] ?? '—',
-                'departamento'  => $sol['departamento'] ?? '',
-                'centro_costos' => $viaje['centro_costos'] ?? ($sol['centro_costos'] ?? ''),
-                'periodo'       => $this->periodo($viaje),
-                'folio_anticipo' => $viaje['folio_anticipo'] ?? '',
-                'fecha'         => Carbon::now('America/Mexico_City')->translatedFormat('d/M/Y'),
+            'logo'  => $logo,
+            'money' => fn ($n) => number_format((float) $n, 2),
+            'meta'  => [
+                'empresa'        => 'LYNCOTT ALIMENTARIA S.A.P.I. DE C.V.',
+                'titulo'         => 'COMPROBACION GASTOS',
+                'sucursal'       => ($viaje['sucursal'] ?? '') ?: 'Planta - Corporativo',
+                'documento'      => $opts['folio'] ?? 'BORRADOR',
+                'fecha'          => Carbon::now('America/Mexico_City')->format('d-m-Y'),
+                'moneda'         => $moneda,
+                'docto_prv'      => $opts['docto_prv'] ?? '—',
+                'referencia'     => $comprobadoPor,
+                'fecha_pago'     => '',
+                'comprobado_por' => $comprobadoPor,
+                'poliza_num'     => $opts['poliza_num'] ?? '—',
+                'empleado'       => $sol['nombre_completo'] ?? '—',
+                'numero'         => $sol['numero_empleado'] ?? '—',
+                'tipo_gasto'     => $viaje['tipo_gasto'] ?? '',
             ],
-            'grupos' => array_values($grupos),
-            'tot' => [
-                'importe' => $fmt($totImporte),
-                'iva'     => $fmt($totIva),
-                'total'   => $fmt($totTotal),
-            ],
+            'relacion'      => $p['relacion'],
+            'importe_total' => $p['importe_total'],
+            'poliza'        => $p['poliza'],
+            'sumas'         => $p['sumas'],
         ];
     }
 
