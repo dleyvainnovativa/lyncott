@@ -321,7 +321,7 @@ class ComprobacionController extends Controller
     /** Group gastos by categoría and format for the PDF view. */
     private function buildPdfData(array $sol, array $viaje, array $gastos): array
     {
-        $fmt = fn ($n) => '$' . number_format((float) $n, 2);
+        $fmt = fn($n) => '$' . number_format((float) $n, 2);
 
         // Embed the Lyncott logo (red, original) as base64 so DomPDF can render it.
         $logoPath = public_path('img/logo.png');
@@ -368,7 +368,7 @@ class ComprobacionController extends Controller
                 'departamento'  => $sol['departamento'] ?? '',
                 'centro_costos' => $viaje['centro_costos'] ?? ($sol['centro_costos'] ?? ''),
                 'periodo'       => $this->periodo($viaje),
-                'folio_anticipo'=> $viaje['folio_anticipo'] ?? '',
+                'folio_anticipo' => $viaje['folio_anticipo'] ?? '',
                 'fecha'         => Carbon::now('America/Mexico_City')->translatedFormat('d/M/Y'),
             ],
             'grupos' => array_values($grupos),
@@ -432,6 +432,7 @@ class ComprobacionController extends Controller
     /** Catálogo "Tipo de Gasto" (lista). */
     private function tiposGasto(): array
     {
-        return ['Viaje', 'Compras', 'Representación', 'Transporte', 'Hospedaje', 'Alimentos', 'Otros'];
+        return ['Gastos de viaje (Comprobación)',  'AMEX (Comprobación)', 'Fondo Fijo (Reembolso)',];
+        // return ['Viaje', 'Compras', 'Representación', 'Transporte', 'Hospedaje', 'Alimentos', 'Otros'];
     }
 }

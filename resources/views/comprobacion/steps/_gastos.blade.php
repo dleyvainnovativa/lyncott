@@ -70,6 +70,7 @@
                     <th>Categoría</th>
                     <th style="text-align:right">Importe</th>
                     <th style="text-align:right">IVA</th>
+                    <th style="text-align:right">Validación</th>
                     <th></th>
                 </tr>
             </thead>
@@ -102,7 +103,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <div class="lx-seg mb-3" id="segTipo" role="tablist">
+                <div class="lx-seg mb-3 d-none" id="segTipo" role="tablist">
                     <button type="button" class="is-on" data-m="sf">Sin factura</button>
                     <button type="button" data-m="cf">Con factura (XML)</button>
                 </div>
@@ -135,7 +136,7 @@
                 </div>
 
                 {{-- Con factura (XML + optional PDF) --}}
-                <div id="cfFields" class="d-flex flex-column gap-3" hidden>
+                <div id="cfFields" class="d-flex flex-column gap-3 d-none" hidden>
                     <div>
                         <label class="form-label" for="mXml">Archivo XML (CFDI 4.0) *</label>
                         <input type="file" class="form-control" id="mXml" accept=".xml,text/xml">

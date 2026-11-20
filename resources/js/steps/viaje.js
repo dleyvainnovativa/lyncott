@@ -8,7 +8,7 @@
 
 import flatpickr from 'flatpickr';
 import { Spanish } from 'flatpickr/dist/l10n/es.js';
-import 'flatpickr/dist/flatpickr.min.css';
+// flatpickr CSS is bundled in resources/css/app.css (linked, no FOUC).
 
 const FLOW = {
   anticipo: {

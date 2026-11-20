@@ -14,8 +14,8 @@
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
 
-    {{-- Bundle: Bootstrap + Font Awesome. No wizard boots here (no #lxWizard). --}}
-    @vite(['resources/js/app.js'])
+    {{-- Linked CSS (no FOUC) + JS bundle. No wizard boots here (no #lxWizard). --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @php
     // Auto-detect the background image: supports public/img/background/<file>
@@ -367,18 +367,18 @@
                     @endif
                 </a>
 
-                <p class="lx-welcome__eyebrow">Plataforma de gastos de viaje</p>
+                <p class="lx-welcome__eyebrow">Portal en línea de</p>
 
-                <h1 class="lx-welcome__title">Anticipos y<br><span class="lx-red">Comprobación</span></h1>
+                <h1 class="lx-welcome__title">Comprobación <br><span class="lx-red">de Gastos</span></h1>
 
                 <p class="lx-welcome__lead">
-                    Solicita un anticipo o comprueba tus gastos de viaje con un proceso
-                    100&nbsp;% digital y firma electrónica.
+                    Para solicitar y comprobar gastos operativos en general, podrás optar por algunas de las opciones siguientes:
+
                 </p>
 
                 <div class="lx-welcome__actions">
                     <a href="{{ route('flujo.anticipo') }}" class="lx-wbtn lx-wbtn--primary">
-                        <i class="fa-solid fa-hand-holding-dollar"></i> Solicitud de anticipo
+                        <i class="fa-solid fa-hand-holding-dollar"></i> Solicitud de gastos
                     </a>
                     <a href="{{ route('flujo.comprobacion') }}" class="lx-wbtn lx-wbtn--ghost">
                         <i class="fa-solid fa-file-invoice-dollar"></i> Comprobación de gastos
@@ -393,7 +393,6 @@
                     <li><i class="fa-solid fa-bolt"></i> Proceso 100&nbsp;% digital</li>
                 </ul> -->
             </div>
-
 
         </div>
 

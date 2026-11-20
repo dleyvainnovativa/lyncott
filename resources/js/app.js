@@ -16,11 +16,8 @@
    Vanilla JS only (Bootstrap is the single UI dependency).
    ========================================================================== */
 
-import 'bootstrap/dist/css/bootstrap.min.css';
-import '@fortawesome/fontawesome-free/css/all.min.css';
+// CSS is loaded as a linked stylesheet via resources/css/app.css (no FOUC).
 import * as bootstrap from 'bootstrap';
-import '../css/theme.css';
-import '../css/shell.css';
 
 import { Wizard } from './wizard.js';
 import { initSolicitante } from './steps/solicitante.js';

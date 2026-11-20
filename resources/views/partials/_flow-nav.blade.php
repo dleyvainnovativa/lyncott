@@ -1,11 +1,15 @@
-{{-- Shared sidebar / offcanvas content. No ids (included twice per page). --}}
+{{-- Shared sidebar / offcanvas content. No ids (included twice per page).
+     $context: 'offcanvas' gets a close button + a non-linking logo;
+     'sidebar' (default) keeps the logo linked to the welcome page. --}}
 @php
     $current = $flujo ?? 'comprobacion';
+    $isOffcanvas = ($context ?? '') === 'offcanvas';
+    $hasLogo = file_exists(public_path('img/logo.png'));
 
     $flows = [
         'anticipo' => [
             'url'   => route('flujo.anticipo'),
-            'title' => 'Solicitud de anticipo',
+            'title' => 'Solicitud de gastos',
             'desc'  => 'Solicita un monto por adelantado.',
             'icon'  => 'fa-hand-holding-dollar',
         ],
@@ -23,13 +27,29 @@
 @endphp
 
 <div class="lx-flownav">
-    <a class="lx-flownav__logo" href="{{ route('welcome') }}" aria-label="Lyncott">
-        @if (file_exists(public_path('img/logo.png')))
-            <img src="{{ asset('img/logo.png') }}" alt="Lyncott">
+    <div class="lx-flownav__top">
+        @if ($isOffcanvas)
+            {{-- Static logo (no redirect) + close button --}}
+            <span class="lx-flownav__logo">
+                @if ($hasLogo)
+                    <img src="{{ asset('img/logo.png') }}" alt="Lyncott">
+                @else
+                    <span>Lyncott</span>
+                @endif
+            </span>
+            <button type="button" class="lx-flownav__close" data-bs-dismiss="offcanvas" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         @else
-            <span>Lyncott</span>
+            <a class="lx-flownav__logo" href="{{ route('welcome') }}" aria-label="Lyncott">
+                @if ($hasLogo)
+                    <img src="{{ asset('img/logo.png') }}" alt="Lyncott">
+                @else
+                    <span>Lyncott</span>
+                @endif
+            </a>
         @endif
-    </a>
+    </div>
 
     <h1 class="lx-flownav__title">Portal de gastos de viaje</h1>
     <p class="lx-flownav__desc">{{ $desc }}</p>

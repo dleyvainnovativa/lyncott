@@ -19,7 +19,7 @@
         } catch (e) {}
     </script>
 
-    @vite(['resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @stack('head')
 </head>
@@ -45,14 +45,14 @@
     <div class="offcanvas offcanvas-start lx-offcanvas" tabindex="-1" id="lxFlowOffcanvas"
          aria-label="Menú de procesos">
         <div class="offcanvas-body">
-            @include('partials._flow-nav', ['flujo' => $flujo])
+            @include('partials._flow-nav', ['flujo' => $flujo, 'context' => 'offcanvas'])
         </div>
     </div>
 
     <div class="lx-shell">
         {{-- Desktop sidebar --}}
         <aside class="lx-sidebar">
-            @include('partials._flow-nav', ['flujo' => $flujo])
+            @include('partials._flow-nav', ['flujo' => $flujo, 'context' => 'sidebar'])
         </aside>
 
         {{-- Content --}}

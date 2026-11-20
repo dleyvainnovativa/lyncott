@@ -137,6 +137,7 @@ export function initGastos(Lx) {
           ${r.auto ? '<div class="lx-autobadge"><i class="fa-solid fa-wand-magic-sparkles"></i> auto</div>' : ''}</td>
         <td data-label="Importe" class="lx-num">${money(r.total)}</td>
         <td data-label="IVA" class="lx-num" style="color:var(--lx-muted)">${money(ivaOf(r))}</td>
+        <td data-label="Validación" class="lx-tnum" style="color:var(--lx-muted)"> - </td>
         <td class="lx-actcell"><button type="button" class="lx-del" data-del="${r.id}" aria-label="Eliminar"><i class="fa-solid fa-trash-can"></i></button></td>
       </tr>`;
     }).join('') : `<tr><td colspan="7" class="lx-empty">Aún no hay gastos. Arrastra un XML o agrega un gasto sin factura.</td></tr>`;
