@@ -72,7 +72,15 @@ class ComprobacionController extends Controller
             ], 404);
         }
 
-        return response()->json(['empleado' => $empleado->only(Empleado::PUBLIC_FIELDS)]);
+        $tarjetas = $empleado->tarjetasActivas()
+            ->orderBy('nombre')
+            ->get(\App\Models\Tarjeta::PUBLIC_FIELDS)
+            ->toArray();
+
+        return response()->json([
+            'empleado' => $empleado->only(Empleado::PUBLIC_FIELDS),
+            'tarjetas' => $tarjetas,
+        ]);
     }
 
     /** Phase 4 — (optional) parse a CFDI 4.0 XML server-side. Front parses client-side. */

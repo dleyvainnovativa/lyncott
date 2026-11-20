@@ -15,6 +15,7 @@ export function initSolicitante(Lx) {
   const wraps  = [numero.closest('.lx-input-wrap'), rfc.closest('.lx-input-wrap')];
 
   let empleado = null;
+  let tarjetas = [];
 
   const fill = (data) => {
     panel.querySelectorAll('[data-emp]').forEach((el) => {
@@ -22,7 +23,7 @@ export function initSolicitante(Lx) {
     });
   };
   const setOk = (on) => wraps.forEach((w) => w.classList.toggle('is-ok', on));
-  const clearResult = () => { empleado = null; setOk(false); fill({}); };
+  const clearResult = () => { empleado = null; tarjetas = []; setOk(false); fill({}); };
 
   // Typing again invalidates the previous match.
   numero.addEventListener('input', clearResult);
@@ -38,6 +39,7 @@ export function initSolicitante(Lx) {
       const res = await Lx.loading.button(btn, () =>
         Lx.http.post(window.LX_ROUTES.empleadoBuscar, { numero_empleado: n, rfc: r }));
       empleado = res.empleado ?? res;
+      tarjetas = res.tarjetas ?? [];
       fill(empleado);
       setOk(true);
       Lx.toast.ok('Empleado validado.');
@@ -57,11 +59,12 @@ export function initSolicitante(Lx) {
       if (!empleado) { Lx.toast.error('Primero valida al empleado con «Buscar».'); return false; }
       return true;
     },
-    collect(state) { state.solicitante = empleado; },
+    collect(state) { state.solicitante = empleado; state.tarjetas = tarjetas; },
     onEnter(state) {
       // Restore a prior match if the user navigates back.
       if (state.solicitante && !empleado) {
         empleado = state.solicitante;
+        tarjetas = state.tarjetas ?? [];
         numero.value = empleado.numero_empleado ?? '';
         rfc.value = empleado.rfc ?? '';
         fill(empleado);

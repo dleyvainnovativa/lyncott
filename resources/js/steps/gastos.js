@@ -22,6 +22,7 @@ export function initGastos(Lx) {
 
   const q  = (sel) => panel.querySelector(sel);
   const rowsEl   = q('#lxRows');
+  const cardTh   = q('.js-card-col');
   const searchEl = q('#lxSearch');
   const dropEl   = q('#lxDrop');
   const xmlInput = q('#lxXmlInput');
@@ -30,6 +31,19 @@ export function initGastos(Lx) {
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const ivaOf = (r) => (r.tipo === 'cf' ? +(r.total - r.total / 1.16).toFixed(2) : 0);
+
+  /* ---- tarjetas assigned to the logged-in employee (from the lookup) ---- */
+  const cards = () => (Lx.Wizard.state.tarjetas || []).filter((t) => t && t.numero);
+  const last4 = (n) => (String(n || '').replace(/\D/g, '').slice(-4) || '····');
+  const cardLabel = (c) => `${c.nombre} ·· ${last4(c.numero)}`;
+  function cardCell(r, cs) {
+    if (cs.length === 1) {
+      return `<td data-label="Tarjeta"><span class="lx-mono" style="font-size:.8rem" title="${esc(cs[0].numero || '')}">${esc(cardLabel(cs[0]))}</span></td>`;
+    }
+    const opts = '<option value="">— selecciona —</option>' +
+      cs.map((c) => `<option value="${c.id}" ${String(r.tarjeta_id) === String(c.id) ? 'selected' : ''}>${esc(cardLabel(c))}</option>`).join('');
+    return `<td data-label="Tarjeta"><select class="lx-tarjeta form-select form-select-sm" data-id="${r.id}" aria-label="Tarjeta">${opts}</select></td>`;
+  }
 
   /* ---- categoría auto-suggest (demo heuristic; real map in config/smartker.php) ---- */
   function suggest(name, rfc) {
@@ -117,6 +131,14 @@ export function initGastos(Lx) {
     const list = data.filter((r) => !needle ||
       ((r.co + r.rfc + r.cat).toLowerCase().includes(needle)));
 
+    const cs = cards();
+    const showCard = cs.length > 0;
+    if (cardTh) cardTh.hidden = !showCard;
+    // One card -> auto-assign the same card to every row.
+    if (cs.length === 1) data.forEach((r) => {
+      if (!r.tarjeta_id) { r.tarjeta_id = cs[0].id; r.tarjeta_nombre = cs[0].nombre; r.tarjeta_numero = cs[0].numero; }
+    });
+
     rowsEl.innerHTML = list.length ? list.map((r) => {
       const opts = (r.cat ? '' : '<option value="" selected>— selecciona —</option>') +
         CATS.map((c) => `<option ${c === r.cat ? 'selected' : ''}>${esc(c)}</option>`).join('');
@@ -135,12 +157,13 @@ export function initGastos(Lx) {
         <td data-label="Categoría">
           <select class="lx-cat ${r.auto ? 'is-auto' : ''}" data-id="${r.id}" aria-label="Categoría">${opts}</select>
           ${r.auto ? '<div class="lx-autobadge"><i class="fa-solid fa-wand-magic-sparkles"></i> auto</div>' : ''}</td>
+        ${showCard ? cardCell(r, cs) : ''}
         <td data-label="Importe" class="lx-num">${money(r.total)}</td>
         <td data-label="IVA" class="lx-num" style="color:var(--lx-muted)">${money(ivaOf(r))}</td>
         <td data-label="Validación" class="lx-tnum" style="color:var(--lx-muted)"> - </td>
         <td class="lx-actcell"><button type="button" class="lx-del" data-del="${r.id}" aria-label="Eliminar"><i class="fa-solid fa-trash-can"></i></button></td>
       </tr>`;
-    }).join('') : `<tr><td colspan="7" class="lx-empty">Aún no hay gastos. Arrastra un XML o agrega un gasto sin factura.</td></tr>`;
+    }).join('') : `<tr><td colspan="${showCard ? 9 : 8}" class="lx-empty">Aún no hay gastos. Arrastra un XML o agrega un gasto sin factura.</td></tr>`;
 
     totals();
     panel.querySelector('[data-tile="count"]').textContent = `${data.length} ${data.length === 1 ? 'gasto' : 'gastos'}`;
@@ -165,7 +188,17 @@ export function initGastos(Lx) {
   });
   rowsEl.addEventListener('change', (e) => {
     const s = e.target.closest('.lx-cat');
-    if (s) { const r = data.find((x) => String(x.id) === s.dataset.id); if (r) { r.cat = s.value; r.auto = false; } render(); }
+    if (s) { const r = data.find((x) => String(x.id) === s.dataset.id); if (r) { r.cat = s.value; r.auto = false; } render(); return; }
+    const tc = e.target.closest('.lx-tarjeta');
+    if (tc) {
+      const r = data.find((x) => String(x.id) === tc.dataset.id);
+      if (r) {
+        const c = cards().find((k) => String(k.id) === tc.value);
+        r.tarjeta_id = c ? c.id : null;
+        r.tarjeta_nombre = c ? c.nombre : null;
+        r.tarjeta_numero = c ? c.numero : null;
+      }
+    }
   });
   searchEl.addEventListener('input', render);
 
@@ -248,6 +281,9 @@ export function initGastos(Lx) {
     },
     validate() {
       if (!data.length) { Lx.toast.error('Agrega al menos un gasto para continuar.'); return false; }
+      if (cards().length > 1 && data.some((r) => !r.tarjeta_id)) {
+        Lx.toast.error('Selecciona la tarjeta para cada gasto.'); return false;
+      }
       return true;
     },
     collect(state) { state.gastos = data; },

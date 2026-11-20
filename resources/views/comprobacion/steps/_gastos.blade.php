@@ -68,6 +68,7 @@
                     <th>Fecha</th>
                     <th>Emisor</th>
                     <th>Categoría</th>
+                    <th class="js-card-col" hidden>Tarjeta</th>
                     <th style="text-align:right">Importe</th>
                     <th style="text-align:right">IVA</th>
                     <th style="text-align:right">Validación</th>
