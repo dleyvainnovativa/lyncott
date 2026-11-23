@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ComprobacionController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,14 +15,18 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Welcome / landing page with the two flow options.
+// Welcome / landing page with the two flow options (and the Microsoft login).
 Route::get('/', [ComprobacionController::class, 'welcome'])->name('welcome');
 
-// One page per flow (sidebar shell + paginated steps).
+// Firebase session auth (Microsoft redirect flow).
+Route::post('/auth/firebase', [AuthController::class, 'login'])->name('auth.login');
+Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+
+// One page per flow (sidebar shell + paginated steps) — gated by the session.
 Route::get('/anticipo', [ComprobacionController::class, 'flujo'])
-    ->defaults('flujo', 'anticipo')->name('flujo.anticipo');
+    ->defaults('flujo', 'anticipo')->middleware('firebase')->name('flujo.anticipo');
 Route::get('/comprobacion', [ComprobacionController::class, 'flujo'])
-    ->defaults('flujo', 'comprobacion')->name('flujo.comprobacion');
+    ->defaults('flujo', 'comprobacion')->middleware('firebase')->name('flujo.comprobacion');
 
 // Legacy entry point — redirect old links to the comprobación flow. The name
 // is kept so any lingering route('comprobacion.index') still resolves.

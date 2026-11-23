@@ -20,10 +20,14 @@ use Illuminate\View\View;
 
 class ComprobacionController extends Controller
 {
-    /** Landing page with the two flow options (anticipo / comprobación). */
-    public function welcome(): View
+    /** Landing page with the two flow options (anticipo / comprobación) + Microsoft login. */
+    public function welcome(Request $request): View
     {
-        return view('bienvenida');
+        return view('bienvenida', [
+            'user'      => $request->session()->get('firebase_user'),
+            'firebase'  => config('firebase.web'),
+            'authError' => $request->session()->get('auth_error'),
+        ]);
     }
 
     /** Flow shell (sidebar + paginated steps). $flujo comes from the route. */

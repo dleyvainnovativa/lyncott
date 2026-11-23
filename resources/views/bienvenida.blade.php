@@ -349,6 +349,14 @@
                         display: none;
                     }
                 }
+
+                /* ---- Auth ---- */
+                .lx-welcome__hi { font-size: .95rem; color: #6c6763; margin: 10px 0 18px; }
+                .lx-welcome__hi strong { color: #1c1a19; }
+                .lx-logout { border: 0; background: none; color: #d42531; font-weight: 600; cursor: pointer; padding: 0; margin-left: 10px; text-decoration: underline; }
+                .lx-welcome__note { font-size: .82rem; color: #9a938d; margin: 14px 0 0; }
+                .lx-welcome__alert { background: rgba(212,37,49,.08); border: 1px solid rgba(212,37,49,.25); color: #b41e29; padding: 10px 14px; border-radius: 10px; font-size: .88rem; margin: 0 0 18px; max-width: 460px; }
+                .lx-wbtn .fa-microsoft { color: inherit; }
             </style>
 </head>
 
@@ -376,14 +384,28 @@
 
                 </p>
 
-                <div class="lx-welcome__actions">
-                    <a href="{{ route('flujo.anticipo') }}" class="lx-wbtn lx-wbtn--primary">
-                        <i class="fa-solid fa-hand-holding-dollar"></i> Solicitud de gastos
-                    </a>
-                    <a href="{{ route('flujo.comprobacion') }}" class="lx-wbtn lx-wbtn--ghost">
-                        <i class="fa-solid fa-file-invoice-dollar"></i> Comprobación de gastos
-                    </a>
-                </div>
+                @if (!empty($user))
+                    <p class="lx-welcome__hi">Hola, <strong>{{ $user['name'] }}</strong>
+                        <button type="button" id="btnLogout" class="lx-logout">Cerrar sesión</button></p>
+                    <div class="lx-welcome__actions">
+                        <a href="{{ route('flujo.anticipo') }}" class="lx-wbtn lx-wbtn--primary">
+                            <i class="fa-solid fa-hand-holding-dollar"></i> Solicitud de gastos
+                        </a>
+                        <a href="{{ route('flujo.comprobacion') }}" class="lx-wbtn lx-wbtn--ghost">
+                            <i class="fa-solid fa-file-invoice-dollar"></i> Comprobación de gastos
+                        </a>
+                    </div>
+                @else
+                    @if (!empty($authError))
+                        <div class="lx-welcome__alert">{{ $authError }}</div>
+                    @endif
+                    <div class="lx-welcome__actions">
+                        <button type="button" id="btnMsLogin" class="lx-wbtn lx-wbtn--primary">
+                            <i class="fa-brands fa-microsoft"></i> Entrar con Microsoft
+                        </button>
+                    </div>
+                    <p class="lx-welcome__note">Acceso solo para cuentas &#64;lyncott.com.mx / &#64;lyncott.mx</p>
+                @endif
 
                 <!-- <ul class="lx-welcome__trust">
                     <li><i class="fa-solid fa-pen-nib"></i> Firma electrónica ContiSign</li>
@@ -400,6 +422,67 @@
             <span>Powered by</span> <strong>ContiSign®</strong>
         </footer> -->
     </main>
+
+    <script>
+        window.LX_FIREBASE = @json($firebase ?? []);
+        window.LX_AUTH = {
+            loginUrl:   @json(route('auth.login')),
+            logoutUrl:  @json(route('auth.logout')),
+            welcomeUrl: @json(route('welcome')),
+            csrf:       @json(csrf_token()),
+        };
+        document.getElementById('btnLogout')?.addEventListener('click', async () => {
+            try {
+                const r = await fetch(window.LX_AUTH.logoutUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': window.LX_AUTH.csrf, 'Accept': 'application/json' },
+                });
+                const d = await r.json().catch(() => ({}));
+                window.location.href = d.redirect || window.LX_AUTH.welcomeUrl;
+            } catch (e) { window.location.href = window.LX_AUTH.welcomeUrl; }
+        });
+    </script>
+
+    {{-- Firebase Microsoft sign-in (full-page redirect). Inert until LX_FIREBASE.apiKey is set. --}}
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+        import { getAuth, OAuthProvider, signInWithRedirect, getRedirectResult }
+            from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+        const cfg = window.LX_FIREBASE || {};
+        if (cfg.apiKey) {
+            const auth = getAuth(initializeApp(cfg));
+
+            // Back from the Microsoft redirect: exchange the ID token for a Laravel session.
+            try {
+                const result = await getRedirectResult(auth);
+                if (result && result.user) {
+                    const idToken = await result.user.getIdToken();
+                    const resp = await fetch(window.LX_AUTH.loginUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': window.LX_AUTH.csrf,
+                        },
+                        body: JSON.stringify({ idToken }),
+                    });
+                    const data = await resp.json().catch(() => ({}));
+                    if (data.ok) { window.location.href = data.redirect || window.LX_AUTH.welcomeUrl; }
+                    else { alert(data.message || 'No se pudo iniciar sesión.'); }
+                }
+            } catch (e) { console.error('getRedirectResult', e); }
+
+            document.getElementById('btnMsLogin')?.addEventListener('click', () => {
+                const provider = new OAuthProvider('microsoft.com');
+                provider.addScope('openid');
+                provider.addScope('email');
+                provider.addScope('profile');
+                if (cfg.tenant) provider.setCustomParameters({ tenant: cfg.tenant });
+                signInWithRedirect(auth, provider);
+            });
+        }
+    </script>
 </body>
 
 </html>
