@@ -35,6 +35,9 @@ export function initViaje(Lx) {
   const f2 = el('fecha_gasto_2');
   const totalBox = el('totalDias');
   let flujo = 'comprobacion';
+  const VIAJE_TIPO = 'Gastos de viaje (Comprobación)';
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* ---- flatpickr range ---- */
   const fp = flatpickr(el('fecha_rango'), {
@@ -67,6 +70,49 @@ export function initViaje(Lx) {
     if (flujo === 'anticipo') e.target.value = e.target.value.replace(/\D/g, '').slice(0, 18);
   });
 
+  /* ---- Folio de anticipo: shown + required only for "Gastos de viaje" (comprobación) ---- */
+  function applyTipoGasto() {
+    if (flujo !== 'comprobacion') return;
+    const wrap = field('folio_anticipo');
+    if (!wrap) return;
+    const isViaje = el('tipo_gasto').value === VIAJE_TIPO;
+    wrap.hidden = !isViaje;
+    if (!isViaje) el('folio_anticipo').value = '';
+    const req = panel.querySelector('[data-req="folio_anticipo"]');
+    if (req) { req.textContent = isViaje ? '*' : ''; req.classList.remove('lx-opt'); }
+  }
+  el('tipo_gasto').addEventListener('change', applyTipoGasto);
+
+  /* ---- Tarjeta (anticipo): 1 card auto-selected, many -> dropdown ---- */
+  const cardLabel = (c) => `${c.nombre} · ${c.numero || '—'}${c.tipo ? ` (${c.tipo})` : ''}`;
+  function setTarjetaHidden() {
+    const sel = el('tarjeta');
+    const c = (Lx.Wizard.state.tarjetas || []).find((k) => String(k.id) === sel.value);
+    el('tarjeta_nombre').value = c ? c.nombre : '';
+    el('tarjeta_numero').value = c ? (c.numero || '') : '';
+  }
+  function applyTarjetas(state) {
+    const wrap = field('tarjeta');
+    if (!wrap) return;
+    const sel = el('tarjeta');
+    const cards = (state.tarjetas || []).filter((t) => t && t.numero);
+    if (flujo !== 'anticipo' || cards.length === 0) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    const cur = sel.value;
+    if (cards.length === 1) {
+      sel.innerHTML = `<option value="${cards[0].id}">${esc(cardLabel(cards[0]))}</option>`;
+      sel.value = cards[0].id;
+    } else {
+      sel.innerHTML = '<option value="">— selecciona tarjeta —</option>' +
+        cards.map((c) => `<option value="${c.id}">${esc(cardLabel(c))}</option>`).join('');
+      sel.value = cur || '';
+    }
+    const req = panel.querySelector('[data-req="tarjeta"]');
+    if (req) { req.textContent = '*'; req.classList.remove('lx-opt'); }
+    setTarjetaHidden();
+  }
+  el('tarjeta').addEventListener('change', setTarjetaHidden);
+
   /* ---- per-flow field visibility + required labels ---- */
   function applyFlow(state) {
     flujo = state.flujo || 'comprobacion';
@@ -88,6 +134,9 @@ export function initViaje(Lx) {
     // CLABE 18-digit hint only for anticipo.
     const hint = panel.querySelector('[data-hint="clabe"]');
     if (hint) hint.hidden = !cfg.clabeDigits;
+
+    applyTipoGasto();
+    applyTarjetas(state);
   }
 
   function clearInvalid() { panel.querySelectorAll('.is-invalid').forEach((n) => n.classList.remove('is-invalid')); }
@@ -124,7 +173,13 @@ export function initViaje(Lx) {
           return fail(node, 'Completa los campos obligatorios del viaje.');
         }
       }
+      if (state.flujo === 'comprobacion' && el('tipo_gasto').value === VIAJE_TIPO
+          && !String(el('folio_anticipo').value).trim()) {
+        return fail(el('folio_anticipo'), 'Captura el folio de anticipo para gastos de viaje.');
+      }
       if (state.flujo === 'anticipo') {
+        const cards = (state.tarjetas || []).filter((t) => t && t.numero);
+        if (cards.length && !el('tarjeta').value) return fail(el('tarjeta'), 'Selecciona la tarjeta del anticipo.');
         if (!(parseFloat(el('monto_anticipo').value) > 0)) return fail(el('monto_anticipo'), 'Captura el monto del anticipo.');
         if (!/^\d{18}$/.test(el('clabe').value)) return fail(el('clabe'), 'La CLABE debe tener 18 dígitos.');
       }

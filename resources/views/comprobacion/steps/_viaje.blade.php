@@ -46,6 +46,14 @@
                 </div>
             </div>
 
+            {{-- Tarjeta asignada (solicitud de anticipo) --}}
+            <div class="col-md-6" data-field="tarjeta" hidden>
+                <label class="form-label" for="tarjeta">Tarjeta <span class="lx-req" data-req="tarjeta"></span></label>
+                <select class="form-select" id="tarjeta" name="tarjeta_id"></select>
+                <input type="hidden" name="tarjeta_nombre" id="tarjeta_nombre">
+                <input type="hidden" name="tarjeta_numero" id="tarjeta_numero">
+            </div>
+
 
 
             <div class="col-md-6" data-field="centro_costos">

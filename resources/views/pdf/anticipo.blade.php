@@ -44,6 +44,9 @@
     <tr><td class="k">Banco</td><td class="v">{{ $m['banco'] ?: '—' }}</td></tr>
     <tr><td class="k">CLABE</td><td class="v">{{ $m['clabe'] ?: '—' }}</td></tr>
     <tr><td class="k">Sucursal</td><td class="v">{{ $m['sucursal'] ?: '—' }}</td></tr>
+    @if (!empty($m['tarjeta']))
+        <tr><td class="k">Tarjeta</td><td class="v">{{ $m['tarjeta'] }}</td></tr>
+    @endif
     @if (!empty($m['observaciones']))
         <tr><td class="k">Observaciones</td><td class="v" style="font-weight:normal">{{ $m['observaciones'] }}</td></tr>
     @endif

@@ -35,7 +35,7 @@ class ComprobacionController extends Controller
             'flujo'       => $flujo,
             'categorias'  => config('smartker.categorias', []),
             'centros'     => $this->centrosCosto(),
-            'tiposGasto'  => $this->tiposGasto(),
+            'tiposGasto'  => $this->tiposGasto($flujo),
             'bancos'      => Banco::where('activo', true)->orderBy('nombre')->get(['clave', 'nombre']),
         ]);
     }
@@ -403,6 +403,7 @@ class ComprobacionController extends Controller
                 'banco'         => $viaje['banco'] ?? '',
                 'clabe'         => $viaje['clabe'] ?? '',
                 'sucursal'      => $viaje['sucursal'] ?? '',
+                'tarjeta'       => trim((string) ($viaje['tarjeta_nombre'] ?? '') . (($viaje['tarjeta_numero'] ?? '') ? ' · ' . $viaje['tarjeta_numero'] : '')),
                 'observaciones' => $viaje['observaciones'] ?? '',
                 'monto'         => '$' . number_format((float) ($viaje['monto_anticipo'] ?? 0), 2),
                 'fecha'         => Carbon::now('America/Mexico_City')->translatedFormat('d/M/Y'),
@@ -433,9 +434,13 @@ class ComprobacionController extends Controller
     }
 
     /** Catálogo "Tipo de Gasto" (lista). */
-    private function tiposGasto(): array
+    private function tiposGasto(string $flujo = 'comprobacion'): array
     {
-        return ['Gastos de viaje (Comprobación)',  'AMEX (Comprobación)', 'Fondo Fijo (Reembolso)',];
-        // return ['Viaje', 'Compras', 'Representación', 'Transporte', 'Hospedaje', 'Alimentos', 'Otros'];
+        // Anticipo (solicitud) only offers viaje + fondo fijo; comprobación adds AMEX.
+        if ($flujo === 'anticipo') {
+            return ['Gastos de viaje (Comprobación)', 'Fondo Fijo (Reembolso)'];
+        }
+
+        return ['Gastos de viaje (Comprobación)', 'AMEX (Comprobación)', 'Fondo Fijo (Reembolso)'];
     }
 }
