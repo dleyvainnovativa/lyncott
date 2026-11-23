@@ -21,7 +21,7 @@
                 </select>
             </div>
             <div class="col-md-12" data-field="folio_anticipo">
-                <label class="form-label" for="folio_anticipo">Documento Probatorio (Folio de anticipo) <span class="lx-req " style="margin-left:10px; font-weight:400; font-style:italic;">(Opcional: En caso de no contar con folio la solicitud será considerada Reembolso)</span></label>
+                <label class="form-label" for="folio_anticipo">Documento Probatorio (Folio de anticipo) <span class="lx-req " style="margin-left:10px; font-weight:400; font-style:italic;">(Nota: Se deberá contar con un folio de anticipo de gastos) dato obligatorio</span></label>
                 <input type="text" class="form-control" id="folio_anticipo" name="folio_anticipo" placeholder="#A12419222">
             </div>
             {{-- Date range (single flatpickr field -> fecha_gasto_1 / fecha_gasto_2) --}}
