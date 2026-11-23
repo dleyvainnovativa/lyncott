@@ -91,6 +91,54 @@ class ComprobacionController extends Controller
         ], 501);
     }
 
+    /** Server-side proxy to the Venvers fiscal-validation service (keeps the api-key secret). */
+    public function validarCfdi(Request $request): JsonResponse
+    {
+        $xml = $this->decodeXml((string) $request->input('xmlB64', ''));
+        if ($xml === '') {
+            return response()->json(['ok' => false, 'message' => 'No se recibió el XML del comprobante.'], 422);
+        }
+
+        $key = (string) config('venvers.key');
+        if ($key === '') {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'La validación fiscal no está configurada (falta VENVERS_API_KEY).',
+            ], 503);
+        }
+
+        try {
+            $resp = \Illuminate\Support\Facades\Http::withHeaders(['x-api-key' => $key])
+                ->timeout((int) config('venvers.timeout', 40))
+                ->attach('Archivo', $xml, 'comprobante.xml')
+                ->post((string) config('venvers.url'));
+        } catch (\Throwable $e) {
+            Log::warning('Venvers request failed', ['error' => $e->getMessage()]);
+            return response()->json(['ok' => false, 'message' => 'No se pudo contactar el servicio de validación.'], 502);
+        }
+
+        if (! $resp->ok()) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'El servicio de validación respondió con un error (' . $resp->status() . ').',
+            ], 502);
+        }
+
+        return response()->json(\App\Services\ValidacionFiscal::normalize((array) $resp->json()));
+    }
+
+    /** Decode a (possibly data-URI) base64 string to raw XML text. */
+    private function decodeXml(string $b64): string
+    {
+        if ($b64 === '') {
+            return '';
+        }
+        if (str_contains($b64, ',')) {
+            $b64 = substr($b64, strpos($b64, ',') + 1);
+        }
+        return (string) base64_decode($b64, true);
+    }
+
     /** Phase 5 — render the review-preview PDF (detalle for comprobación, summary for anticipo). */
     public function previewPdf(Request $request)
     {

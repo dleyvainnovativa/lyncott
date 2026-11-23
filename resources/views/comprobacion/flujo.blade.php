@@ -11,6 +11,7 @@
         window.LX_ROUTES = {
             empleadoBuscar:     @json(route('api.empleado.buscar')),
             cfdiParse:          @json(route('api.cfdi.parse')),
+            cfdiValidar:        @json(route('api.cfdi.validar')),
             comprobacionPdf:    @json(route('api.comprobacion.pdf')),
             comprobacionEnviar: @json(route('api.comprobacion.enviar')),
         };

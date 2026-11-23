@@ -46,6 +46,91 @@ export function initGastos(Lx) {
     return `<td data-label="Tarjeta"><select class="lx-tarjeta form-select form-select-sm lx-cardsel" data-id="${r.id}" aria-label="Tarjeta">${opts}</select></td>`;
   }
 
+  /* ---- fiscal validation (Venvers, via the server-side proxy) ---- */
+  const valCache = new Map(); // uuid -> normalized result (avoid re-registering a comprobante)
+
+  function valCell(r) {
+    const hasXml = r.tipo === 'cf' && !!r.xmlB64;
+    if (!hasXml) return '<td data-label="Validación" class="lx-tnum"><span class="lx-val lx-val-na">N/A</span></td>';
+    const v = r.val || { status: 'idle' };
+    if (v.status === 'loading') {
+      return '<td data-label="Validación"><span class="lx-val lx-val-loading"><i class="fa-solid fa-spinner fa-spin"></i> Validando…</span></td>';
+    }
+    if (v.status === 'valido' || v.status === 'invalido') {
+      const dup = v.data && v.data.duplicado;
+      const cls = v.status === 'valido' ? (dup ? 'lx-val-warn' : 'lx-val-ok') : 'lx-val-bad';
+      const ico = v.status === 'valido' ? (dup ? 'fa-triangle-exclamation' : 'fa-circle-check') : 'fa-circle-xmark';
+      const txt = v.status === 'valido' ? (dup ? 'Duplicado' : 'Válido') : 'Inválido';
+      return `<td data-label="Validación"><button type="button" class="lx-val lx-valchip ${cls}" data-valshow="${r.id}" title="Ver detalle"><i class="fa-solid ${ico}"></i> ${txt}</button></td>`;
+    }
+    if (v.status === 'error') {
+      return `<td data-label="Validación"><button type="button" class="lx-val lx-valchip lx-val-bad" data-validar="${r.id}" title="${esc(v.msg || 'Error')}"><i class="fa-solid fa-rotate-right"></i> Reintentar</button></td>`;
+    }
+    return `<td data-label="Validación"><button type="button" class="lx-val lx-val-btn" data-validar="${r.id}">Validar</button></td>`;
+  }
+
+  async function validarRow(id, { silent = false } = {}) {
+    const r = data.find((x) => String(x.id) === String(id));
+    if (!r || r.tipo !== 'cf' || !r.xmlB64) return null;
+
+    if (r.uuid && valCache.has(r.uuid)) {
+      const cached = valCache.get(r.uuid);
+      r.val = { status: cached.status, data: cached };
+      render(); return null;
+    }
+
+    r.val = { status: 'loading' }; render();
+    try {
+      const res = await Lx.http.post(window.LX_ROUTES.cfdiValidar, { xmlB64: r.xmlB64, uuid: r.uuid || '' });
+      r.val = { status: res.status === 'valido' ? 'valido' : 'invalido', data: res };
+      if (r.uuid) valCache.set(r.uuid, res);
+      render(); return null;
+    } catch (e) {
+      r.val = { status: 'error', msg: e.message || 'No se pudo validar.' };
+      if (!silent) Lx.toast.error(e.message || 'No se pudo validar el comprobante.');
+      render(); return e;
+    }
+  }
+
+  async function validarTodas() {
+    const pend = data.filter((r) => r.tipo === 'cf' && r.xmlB64 &&
+      (!r.val || r.val.status === 'idle' || r.val.status === 'error'));
+    if (!pend.length) { Lx.toast.ok('No hay comprobantes pendientes por validar.'); return; }
+
+    const btn = panel.querySelector('#btnValidarTodas');
+    let firstErr = null;
+    let i = 0;
+    const worker = async () => {
+      while (i < pend.length) {
+        const r = pend[i++];
+        const err = await validarRow(r.id, { silent: true });
+        if (err && !firstErr) firstErr = err;
+      }
+    };
+    await Lx.loading.button(btn, () => Promise.all([worker(), worker(), worker()]));
+    if (firstErr) Lx.toast.error(firstErr.message || 'Algunos comprobantes no se pudieron validar.');
+  }
+
+  const VAL_IC = { ok: 'fa-circle-check ic-ok', fail: 'fa-circle-xmark ic-fail', na: 'fa-minus ic-na' };
+  function showValidacion(id) {
+    const r = data.find((x) => String(x.id) === String(id));
+    if (!r || !r.val || !r.val.data) return;
+    const d = r.val.data;
+    const head = panel.querySelector('#valHead');
+    const body = panel.querySelector('#valBody');
+    const chipCls = d.status === 'valido' ? (d.duplicado ? 'lx-val-warn' : 'lx-val-ok') : 'lx-val-bad';
+    const chipTxt = d.status === 'valido' ? (d.duplicado ? 'Válido (duplicado)' : 'Válido fiscal') : 'No válido';
+    head.innerHTML = `<span class="lx-valchip ${chipCls}">${esc(chipTxt)}</span>
+      ${d.mensaje ? `<div class="mt-2" style="font-size:.82rem;color:var(--lx-muted)">${esc(d.mensaje)}</div>` : ''}`;
+    body.innerHTML = (d.checks || []).map((c) => `
+      <div class="lx-valrow">
+        <i class="fa-solid ${VAL_IC[c.estado] || VAL_IC.na}"></i>
+        <div><div class="vn">${esc(c.validacion)} <small style="color:var(--lx-faint)">· ${esc(c.codigo)}</small></div>
+          ${c.explicacion ? `<div class="vd">${esc(c.explicacion)}</div>` : ''}</div>
+      </div>`).join('');
+    Lx.modal.show('modalValidacion');
+  }
+
   /* ---- categoría auto-suggest (demo heuristic; real map in config/smartker.php) ---- */
   function suggest(name, rfc) {
     const s = ((name || '') + ' ' + (rfc || '')).toUpperCase();
@@ -161,7 +246,7 @@ export function initGastos(Lx) {
         ${showCard ? cardCell(r, cs) : ''}
         <td data-label="Importe" class="lx-num">${money(r.total)}</td>
         <td data-label="IVA" class="lx-num" style="color:var(--lx-muted)">${money(ivaOf(r))}</td>
-        <td data-label="Validación" class="lx-tnum" style="color:var(--lx-muted)"> - </td>
+        ${valCell(r)}
         <td class="lx-actcell"><button type="button" class="lx-del" data-del="${r.id}" aria-label="Eliminar"><i class="fa-solid fa-trash-can"></i></button></td>
       </tr>`;
     }).join('') : `<tr><td colspan="${showCard ? 9 : 8}" class="lx-empty">Aún no hay gastos. Arrastra un XML o agrega un gasto sin factura.</td></tr>`;
@@ -185,8 +270,14 @@ export function initGastos(Lx) {
   /* ---- table interactions ---- */
   rowsEl.addEventListener('click', (e) => {
     const b = e.target.closest('[data-del]');
-    if (b) { data = data.filter((r) => String(r.id) !== b.dataset.del); render(); }
+    if (b) { data = data.filter((r) => String(r.id) !== b.dataset.del); render(); return; }
+    const vb = e.target.closest('[data-validar]');
+    if (vb) { validarRow(vb.dataset.validar); return; }
+    const vs = e.target.closest('[data-valshow]');
+    if (vs) { showValidacion(vs.dataset.valshow); return; }
   });
+
+  panel.querySelector('#btnValidarTodas')?.addEventListener('click', validarTodas);
   rowsEl.addEventListener('change', (e) => {
     const s = e.target.closest('.lx-cat');
     if (s) { const r = data.find((x) => String(x.id) === s.dataset.id); if (r) { r.cat = s.value; r.auto = false; } render(); return; }

@@ -41,6 +41,10 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('/cfdi/parse', [ComprobacionController::class, 'parseCfdi'])
         ->name('cfdi.parse');
 
+    // Fiscal validation proxy (Venvers) — keeps the api-key server-side.
+    Route::post('/cfdi/validar', [ComprobacionController::class, 'validarCfdi'])
+        ->name('cfdi.validar');
+
     // Render the Lyncott PDF for the review preview.
     Route::post('/comprobacion/pdf', [ComprobacionController::class, 'previewPdf'])
         ->name('comprobacion.pdf');

@@ -5,6 +5,20 @@
     .lx-cardlbl { font-family: 'JetBrains Mono', monospace; font-size: .78rem; white-space: nowrap; }
     th.js-card-col { min-width: 260px; }
     .lx-table td[data-label="Tarjeta"] { white-space: nowrap; }
+
+    /* Fiscal validation (Venvers) */
+    .lx-val { font-size: .76rem; }
+    .lx-val-btn { border: 1px solid var(--lx-line); background: var(--lx-surface); color: var(--lx-fg); padding: 3px 11px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .lx-val-btn:hover { border-color: var(--lx-red); color: var(--lx-red); }
+    .lx-valchip { border: 0; padding: 3px 10px; border-radius: 20px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+    .lx-val-ok { background: rgba(31,138,83,.12); color: #1f8a53; }
+    .lx-val-bad { background: rgba(212,37,49,.12); color: #c02630; }
+    .lx-val-warn { background: rgba(214,158,46,.16); color: #936711; }
+    .lx-val-na { color: var(--lx-faint); }
+    .lx-val-loading { color: var(--lx-muted); }
+    .lx-valrow { display: flex; align-items: flex-start; gap: 9px; padding: 8px 2px; border-bottom: 1px solid var(--lx-line); }
+    .lx-valrow .ic-ok { color: #1f8a53; } .lx-valrow .ic-fail { color: #c02630; } .lx-valrow .ic-na { color: var(--lx-faint); }
+    .lx-valrow i { margin-top: 2px; } .lx-valrow .vn { font-weight: 600; font-size: .86rem; } .lx-valrow .vd { font-size: .78rem; color: var(--lx-muted); }
 </style>
 <div class="lx-panel-head">
     <span class="lx-ico"><i class="fa-solid fa-file-invoice-dollar"></i></span>
@@ -62,6 +76,9 @@
         <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
         <input type="text" class="form-control" id="lxSearch" placeholder="Buscar por emisor, RFC o categoría…">
     </div>
+    <button type="button" class="btn btn-lx-sub" id="btnValidarTodas">
+        <i class="fa-solid fa-shield-halved me-1"></i> Validar todas
+    </button>
     <span class="ms-auto" style="font-size:.82rem;color:var(--lx-muted)" data-tile="count">0 gastos</span>
 </div>
 
@@ -162,6 +179,25 @@
             <div class="modal-footer lx-modal-foot">
                 <button type="button" class="btn btn-lx-ghost" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-lx" id="btnGuardarGasto">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Validation detail modal --}}
+<div class="modal fade" id="modalValidacion" tabindex="-1" aria-labelledby="modalValidacionTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header lx-modal-head">
+                <h3 class="modal-title h5 mb-0" id="modalValidacionTitle">Validación fiscal (Venvers)</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="valHead" class="mb-3"></div>
+                <div id="valBody"></div>
+            </div>
+            <div class="modal-footer lx-modal-foot">
+                <button type="button" class="btn btn-lx" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
