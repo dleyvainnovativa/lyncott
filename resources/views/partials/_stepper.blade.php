@@ -4,12 +4,13 @@
     $allSteps = [
         'solicitante' => ['lbl' => 'Datos del Solicitante', 'icon' => 'fa-user'],
         'viaje'       => ['lbl' => 'Datos del Viaje',       'icon' => 'fa-calendar-days'],
+        'desglose'    => ['lbl' => 'Desglose del anticipo', 'icon' => 'fa-coins'],
         'gastos'      => ['lbl' => 'Gestión de gastos',     'icon' => 'fa-file-invoice-dollar'],
         'revisar'     => ['lbl' => 'Revisar y Enviar',      'icon' => 'fa-circle-check'],
     ];
 
     $seq = ($flujo ?? 'comprobacion') === 'anticipo'
-        ? ['solicitante', 'viaje', 'revisar']
+        ? ['solicitante', 'viaje', 'desglose', 'revisar']
         : ['solicitante', 'viaje', 'gastos', 'revisar'];
 @endphp
 <ol class="lx-steps">

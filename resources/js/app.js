@@ -22,6 +22,7 @@ import * as bootstrap from 'bootstrap';
 import { Wizard } from './wizard.js';
 import { initSolicitante } from './steps/solicitante.js';
 import { initViaje } from './steps/viaje.js';
+import { initDesglose } from './steps/desglose.js';
 import { initGastos } from './steps/gastos.js';
 import { initRevisar } from './steps/revisar.js';
 import { initFlowNav } from './steps/flownav.js';
@@ -237,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
     Wizard.state.flujo = window.LX_FLUJO || Wizard.state.flujo;
     initSolicitante(Lx);   // registers the "solicitante" step
     initViaje(Lx);         // registers the "viaje" step
+    initDesglose(Lx);      // registers "desglose" (anticipo page only)
     initGastos(Lx);        // registers "gastos" (absent on the anticipo page)
     initRevisar(Lx);       // registers "revisar" + submit
     initFlowNav(Lx);       // sidebar/offcanvas flow-switch warning

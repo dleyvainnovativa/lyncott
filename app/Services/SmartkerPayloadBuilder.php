@@ -31,9 +31,12 @@ class SmartkerPayloadBuilder
         $attributes = [];
         $fileCount  = 0;
 
+        $cardLabel = trim((string) ($c->tarjeta_nombre ?? '')
+            . (($c->tarjeta_numero ?? '') ? ' · ' . $c->tarjeta_numero : ''));
+
         foreach ($map as $name => $fieldId) {
             if ($name === 'tabla') {
-                [$tableAttr, $cnt] = self::tableAttribute($gastos, $filesByGastoId);
+                [$tableAttr, $cnt] = self::tableAttribute($gastos, $filesByGastoId, $cardLabel);
                 $attributes[] = $tableAttr;
                 $fileCount += $cnt;
                 continue;
@@ -80,11 +83,15 @@ class SmartkerPayloadBuilder
             'sucursal'        => $c->sucursal_cedis,
             'banco'           => $c->banco,
             'monto'           => self::num($flujo === 'anticipo' ? $c->monto_anticipo : $c->monto_comprobacion),
+            'moneda'          => $c->moneda ?: 'MXN',
+            'referencia'      => $c->referencia,
+            'tarjeta'         => trim((string) ($c->tarjeta_nombre ?? '')
+                . (($c->tarjeta_numero ?? '') ? ' · ' . $c->tarjeta_numero : '')),
         ];
     }
 
-    /** Build the fieldId-13 table attribute from gastos. Returns [attr, fileCount]. */
-    private static function tableAttribute(iterable $gastos, array $filesByGastoId): array
+    /** Build the gastos-table attribute. Returns [attr, fileCount]. */
+    private static function tableAttribute(iterable $gastos, array $filesByGastoId, string $cardLabel = ''): array
     {
         $tabla = config('smartker.tabla');
         $types = config('smartker.field_types');
@@ -108,6 +115,10 @@ class SmartkerPayloadBuilder
             $cells[] = self::cell($cols['justificacion'], $row, $g->justificacion ?? '', $types);
             $cells[] = self::cell($cols['cantidad'], $row, '1', $types);
             $cells[] = self::cell($cols['importe'], $row, self::num($g->total), $types);
+            // Per-row Tarjeta (ID 40): the comprobación's card (one card per document).
+            if (isset($cols['tarjeta'])) {
+                $cells[] = self::cell($cols['tarjeta'], $row, $cardLabel, $types);
+            }
         }
 
         return [[

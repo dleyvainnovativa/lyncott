@@ -173,11 +173,13 @@ export function initRevisar(Lx) {
         solicitante: state.solicitante,
         viaje: state.viaje,
         gastos: state.flujo === 'anticipo' ? [] : state.gastos,
+        desglose: state.flujo === 'anticipo' ? (state.desglose || {}) : null,
       });
 
       const esAnticipo = state.flujo === 'anticipo';
       setEx('message', res.message || '');
-      setEx('folio', res.folio || '—');
+      // For anticipo show the generated folio (ANT-…) the comprobación will reference later.
+      setEx('folio', (esAnticipo && res.folio_anticipo) ? res.folio_anticipo : (res.folio || '—'));
       setEx('total', money(esAnticipo ? (res.resumen?.anticipo || 0) : (res.resumen?.total || 0)));
       panel.querySelector('[data-ex-label="total"]').textContent = esAnticipo ? 'Monto del anticipo' : 'Total comprobación';
       setEx('payload', `#${res.payload_id} · ${res.live ? (res.sent ? 'enviado' : 'no enviado') : 'modo demo (no enviado)'}`);

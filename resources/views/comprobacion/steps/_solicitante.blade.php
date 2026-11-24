@@ -40,11 +40,11 @@
                 <label class="form-label">Correo electrónico</label>
                 <input type="text" class="form-control" data-emp="correo" readonly>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 d-none">
                 <label class="form-label">Puesto</label>
                 <input type="text" class="form-control" data-emp="puesto" readonly>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 d-none">
                 <label class="form-label">Gerencia</label>
                 <input type="text" class="form-control" data-emp="gerencia" readonly>
             </div>
@@ -56,7 +56,7 @@
                 <label class="form-label">Días disponibles</label>
                 <input type="text" class="form-control lx-mono" data-emp="dias_disponibles" readonly>
             </div>
-            <div class="col-12">
+            <div class="col-12 d-none">
                 <label class="form-label">Dirección perteneciente</label>
                 <input type="text" class="form-control" data-emp="direccion" readonly>
             </div>

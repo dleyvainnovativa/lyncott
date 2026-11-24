@@ -66,10 +66,16 @@
                 </select>
             </div>
 
-            {{-- Sucursal --}}
+            {{-- Sucursal (renombrado a "Destino / Concepto" en el flujo de anticipo vía JS) --}}
             <div class="col-md-6" data-field="sucursal">
-                <label class="form-label" for="sucursal">Sucursal <span class="lx-req" data-req="sucursal"></span></label>
+                <label class="form-label" for="sucursal" data-label="sucursal">Sucursal <span class="lx-req" data-req="sucursal"></span></label>
                 <input type="text" class="form-control" id="sucursal" name="sucursal" placeholder="Escribe la sucursal">
+            </div>
+
+            {{-- Fecha de dispersación de monto (solo anticipo) --}}
+            <div class="col-md-6" data-field="fecha_dispersacion" hidden>
+                <label class="form-label" for="fecha_dispersacion">Fecha de dispersación de monto <span class="lx-req" data-req="fecha_dispersacion"></span></label>
+                <input type="date" class="form-control lx-mono" id="fecha_dispersacion" name="fecha_dispersacion">
             </div>
 
             {{-- Banco + CLABE --}}
@@ -103,9 +109,9 @@
                 <label class="form-label" for="moneda">Moneda <span class="lx-req" data-req="moneda"></span></label>
                 <select class="form-select" id="moneda" name="moneda">
                     <option value="">Seleccione la moneda</option>
-                    <option value="peso">Peso Mexicano (MXN)</option>
-                    <option value="dolar">Dólar Estadounidense (USD)</option>
-                    <option value="dolar">Euro (EUR)</option>
+                    <option value="MXN">Peso Mexicano (MXN)</option>
+                    <option value="USD">Dólar Estadounidense (USD)</option>
+                    <option value="EUR">Euro (EUR)</option>
                 </select>
             </div>
 

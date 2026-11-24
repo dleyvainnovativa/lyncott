@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ComprobacionController extends Controller
@@ -166,21 +167,31 @@ class ComprobacionController extends Controller
             'solicitante.numero_empleado' => ['required', 'string'],
         ], [], ['terminos' => 'aceptación de términos']);
 
-        $flujo  = $request->input('flujo');
-        $sol    = (array) $request->input('solicitante', []);
-        $viaje  = (array) $request->input('viaje', []);
-        $gastos = (array) $request->input('gastos', []);
+        $flujo    = $request->input('flujo');
+        $sol      = (array) $request->input('solicitante', []);
+        $viaje    = (array) $request->input('viaje', []);
+        $gastos   = (array) $request->input('gastos', []);
+        $desglose = (array) $request->input('desglose', []);
 
         if ($flujo === 'comprobacion' && count($gastos) < 1) {
             return response()->json(['message' => 'Agrega al menos un gasto para comprobar.'], 422);
         }
-        if ($flujo === 'anticipo' && ! ((float) ($viaje['monto_anticipo'] ?? 0) > 0)) {
-            return response()->json(['message' => 'Captura el monto del anticipo.'], 422);
+
+        // Anticipo: the amount is the sum of the desglose (alimentos + pasajes +
+        // peajes + each "otros" line). Computed server-side; never trust the client total.
+        if ($flujo === 'anticipo') {
+            $montoAnticipo = self::sumaDesglose($desglose);
+            if (! ($montoAnticipo > 0)) {
+                return response()->json(['message' => 'Captura al menos un monto en el desglose del anticipo.'], 422);
+            }
+            $viaje['monto_anticipo'] = $montoAnticipo;
+            // Folio generated when the anticipo is registered; the comprobación later references it.
+            $viaje['folio_anticipo'] = 'ANT-' . strtoupper(substr(str_replace('-', '', (string) Str::uuid()), 0, 10));
         }
 
-        $resultados = DB::transaction(function () use ($flujo, $sol, $viaje, $gastos) {
+        $resultados = DB::transaction(function () use ($flujo, $sol, $viaje, $gastos, $desglose) {
             if ($flujo === 'anticipo') {
-                return [$this->procesarComprobacion('anticipo', $sol, $viaje, [])];
+                return [$this->procesarComprobacion('anticipo', $sol, $viaje, [], $desglose)];
             }
 
             // Comprobación: one document (PDF + póliza + submission) per selected card.
@@ -199,13 +210,13 @@ class ComprobacionController extends Controller
         });
 
         // Aggregate across the one-or-more comprobaciones created.
-        $comps     = array_map(fn($r) => $r['comprobacion'], $resultados);
+        $comps     = array_map(fn ($r) => $r['comprobacion'], $resultados);
         $first     = $resultados[0];
-        $allSent   = count(array_filter($resultados, fn($r) => $r['sent'])) === count($resultados);
-        $anyLive   = (bool) array_filter($resultados, fn($r) => $r['live']);
-        $fileCount = array_sum(array_map(fn($r) => (int) $r['payloadRecord']->file_count, $resultados));
+        $allSent   = count(array_filter($resultados, fn ($r) => $r['sent'])) === count($resultados);
+        $anyLive   = (bool) array_filter($resultados, fn ($r) => $r['live']);
+        $fileCount = array_sum(array_map(fn ($r) => (int) $r['payloadRecord']->file_count, $resultados));
 
-        $lista = array_map(fn($r) => [
+        $lista = array_map(fn ($r) => [
             'folio'      => $r['comprobacion']->folio(),
             'tarjeta'    => trim((string) ($r['comprobacion']->tarjeta_nombre ?? '')
                 . (($r['comprobacion']->tarjeta_numero ?? '') ? ' · ' . $r['comprobacion']->tarjeta_numero : '')) ?: 'Sin tarjeta',
@@ -229,11 +240,12 @@ class ComprobacionController extends Controller
             'payload_id'      => $first['payloadRecord']->id,
             'file_count'      => $fileCount,
             'tipo_solicitud'  => $flujo,
+            'folio_anticipo'  => $flujo === 'anticipo' ? $first['comprobacion']->folio_anticipo : null,
             'resumen'         => [
-                'con_factura' => array_sum(array_map(fn($c) => (float) $c->total_con_factura, $comps)),
-                'sin_factura' => array_sum(array_map(fn($c) => (float) $c->total_sin_factura, $comps)),
-                'iva'         => array_sum(array_map(fn($c) => (float) $c->iva_total, $comps)),
-                'total'       => array_sum(array_map(fn($c) => (float) $c->monto_comprobacion, $comps)),
+                'con_factura' => array_sum(array_map(fn ($c) => (float) $c->total_con_factura, $comps)),
+                'sin_factura' => array_sum(array_map(fn ($c) => (float) $c->total_sin_factura, $comps)),
+                'iva'         => array_sum(array_map(fn ($c) => (float) $c->iva_total, $comps)),
+                'total'       => array_sum(array_map(fn ($c) => (float) $c->monto_comprobacion, $comps)),
                 'anticipo'    => (float) $first['comprobacion']->monto_anticipo,
             ],
             'comprobaciones'  => $lista,
@@ -244,8 +256,18 @@ class ComprobacionController extends Controller
         ]);
     }
 
+    /** Sum of the anticipo desglose: alimentos + pasajes + peajes + each "otros" line. */
+    private static function sumaDesglose(array $d): float
+    {
+        $total = (float) ($d['alimentos'] ?? 0) + (float) ($d['pasajes'] ?? 0) + (float) ($d['peajes'] ?? 0);
+        foreach ((array) ($d['otros'] ?? []) as $o) {
+            $total += (float) ($o['monto'] ?? 0);
+        }
+        return round($total, 2);
+    }
+
     /** Creates one Comprobación from a set of gastos (one card): persists, builds its PDF + Smartker submission. */
-    private function procesarComprobacion(string $flujo, array $sol, array $viaje, array $gastos): array
+    private function procesarComprobacion(string $flujo, array $sol, array $viaje, array $gastos, array $desglose = []): array
     {
         // Server-side totals (comprobación only; never trust the client).
         $totCf = $totSf = $iva = 0.0;
@@ -288,6 +310,10 @@ class ComprobacionController extends Controller
             'justificacion'      => $viaje['observaciones'] ?? null,
             'tarjeta_nombre'     => $cardNombre,
             'tarjeta_numero'     => $cardNumero,
+            // Anticipo hides moneda/referencia (defaults); comprobación captures them.
+            'moneda'             => $flujo === 'anticipo' ? 'MXN' : (($viaje['moneda'] ?? '') ?: 'MXN'),
+            'referencia'         => $flujo === 'anticipo' ? null : ($viaje['referencia'] ?? null),
+            'fecha_dispersacion' => $viaje['fecha_dispersacion'] ?? null,
             'total_con_factura'  => $totCf,
             'total_sin_factura'  => $totSf,
             'iva_total'          => $iva,
@@ -348,7 +374,7 @@ class ComprobacionController extends Controller
 
             $built = SmartkerPayloadBuilder::build($comprobacion, 'comprobacion', $comprobacion->gastos, $filesByGastoId, $principal);
         } else {
-            $pdfData  = $this->buildAnticipoPdfData($sol, $viaje);
+            $pdfData  = $this->buildAnticipoPdfData($sol, $viaje, $desglose);
             $pdfBytes = Pdf::loadView('pdf.anticipo', $pdfData)->setPaper('letter')->output();
             $principal = [
                 'fileName'  => 'anticipo-' . $comprobacion->folio() . '.pdf',
@@ -416,20 +442,20 @@ class ComprobacionController extends Controller
 
         // "Comprobado por" / Referencia: the card when there's a single one, else the employee.
         $cards = array_values(array_unique(array_filter(array_map(
-            fn($g) => trim((string) ($g['tarjeta_nombre'] ?? '')),
+            fn ($g) => trim((string) ($g['tarjeta_nombre'] ?? '')),
             $gastos,
         ))));
         $comprobadoPor = count($cards) === 1 ? $cards[0] : ($sol['nombre_completo'] ?? '—');
 
-        $moneda = match (strtolower((string) ($viaje['moneda'] ?? 'peso'))) {
-            'dolar' => 'DOLARES',
-            'euro'  => 'EUROS',
+        $moneda = match (strtoupper((string) ($viaje['moneda'] ?? 'MXN'))) {
+            'USD' => 'DOLARES',
+            'EUR' => 'EUROS',
             default => 'PESOS',
         };
 
         return [
             'logo'  => $logo,
-            'money' => fn($n) => number_format((float) $n, 2),
+            'money' => fn ($n) => number_format((float) $n, 2),
             'meta'  => [
                 'empresa'        => 'LYNCOTT ALIMENTARIA S.A.P.I. DE C.V.',
                 'titulo'         => 'COMPROBACION GASTOS',
@@ -453,16 +479,32 @@ class ComprobacionController extends Controller
         ];
     }
 
-    /** Data for the anticipo summary PDF. */
-    private function buildAnticipoPdfData(array $sol, array $viaje): array
+    /** Data for the anticipo summary PDF (incl. the desglose breakdown). */
+    private function buildAnticipoPdfData(array $sol, array $viaje, array $desglose = []): array
     {
         $logoPath = public_path('img/logo.png');
         $logo = file_exists($logoPath)
             ? 'data:image/png;base64,' . base64_encode((string) file_get_contents($logoPath))
             : null;
 
+        // Desglose lines for the PDF table: the 3 fixed buckets + each "otros" line.
+        $lineas = [];
+        foreach (['alimentos' => 'Alimentos', 'pasajes' => 'Pasajes', 'peajes' => 'Peajes'] as $k => $lbl) {
+            $monto = (float) ($desglose[$k] ?? 0);
+            if ($monto > 0) $lineas[] = ['concepto' => $lbl, 'monto' => $monto];
+        }
+        foreach ((array) ($desglose['otros'] ?? []) as $o) {
+            $monto = (float) ($o['monto'] ?? 0);
+            if ($monto > 0) {
+                $desc = trim((string) ($o['descripcion'] ?? ''));
+                $lineas[] = ['concepto' => 'Otros' . ($desc !== '' ? ' — ' . $desc : ''), 'monto' => $monto];
+            }
+        }
+
         return [
             'logo' => $logo,
+            'money' => fn ($n) => number_format((float) $n, 2),
+            'lineas' => $lineas,
             'm' => [
                 'nombre'        => $sol['nombre_completo'] ?? '—',
                 'numero'        => $sol['numero_empleado'] ?? '—',
@@ -470,9 +512,9 @@ class ComprobacionController extends Controller
                 'periodo'       => $this->periodo($viaje),
                 'tipo_gasto'    => $viaje['tipo_gasto'] ?? '',
                 'centro_costos' => $viaje['centro_costos'] ?? '',
-                'banco'         => $viaje['banco'] ?? '',
                 'clabe'         => $viaje['clabe'] ?? '',
-                'sucursal'      => $viaje['sucursal'] ?? '',
+                'destino'       => $viaje['sucursal'] ?? '',
+                'fecha_disp'    => $viaje['fecha_dispersacion'] ?? '',
                 'tarjeta'       => trim((string) ($viaje['tarjeta_nombre'] ?? '') . (($viaje['tarjeta_numero'] ?? '') ? ' · ' . $viaje['tarjeta_numero'] : '')),
                 'observaciones' => $viaje['observaciones'] ?? '',
                 'monto'         => '$' . number_format((float) ($viaje['monto_anticipo'] ?? 0), 2),
@@ -506,9 +548,9 @@ class ComprobacionController extends Controller
     /** Catálogo "Tipo de Gasto" (lista). */
     private function tiposGasto(string $flujo = 'comprobacion'): array
     {
-        // Anticipo (solicitud) only offers viaje + fondo fijo; comprobación adds AMEX.
+        // Anticipo (solicitud) only offers Gastos de viaje; comprobación adds AMEX + Fondo Fijo.
         if ($flujo === 'anticipo') {
-            return ['Gastos de viaje (Comprobación)', 'Fondo Fijo (Reembolso)'];
+            return ['Gastos de viaje'];
         }
 
         return ['Gastos de viaje (Comprobación)', 'AMEX (Comprobación)', 'Fondo Fijo (Reembolso)'];

@@ -64,9 +64,6 @@
         <button type="button" class="btn btn-lx" id="btnAddGasto">
             <i class="fa-solid fa-plus me-1"></i> Agregar gasto
         </button>
-        <button type="button" class="btn btn-lx-sub" id="btnDemoXml">
-            <i class="fa-regular fa-file-code me-1"></i> Cargar XML de ejemplo
-        </button>
     </div>
 </div>
 

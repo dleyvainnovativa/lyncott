@@ -41,9 +41,9 @@
     <tr><td class="k">Periodo del gasto</td><td class="v">{{ $m['periodo'] }}</td></tr>
     <tr><td class="k">Tipo de gasto</td><td class="v">{{ $m['tipo_gasto'] ?: '—' }}</td></tr>
     <tr><td class="k">Centro de costos</td><td class="v">{{ $m['centro_costos'] ?: '—' }}</td></tr>
-    <tr><td class="k">Banco</td><td class="v">{{ $m['banco'] ?: '—' }}</td></tr>
     <tr><td class="k">CLABE</td><td class="v">{{ $m['clabe'] ?: '—' }}</td></tr>
-    <tr><td class="k">Sucursal</td><td class="v">{{ $m['sucursal'] ?: '—' }}</td></tr>
+    <tr><td class="k">Destino / Concepto</td><td class="v">{{ $m['destino'] ?: '—' }}</td></tr>
+    <tr><td class="k">Fecha de dispersación</td><td class="v">{{ $m['fecha_disp'] ?: '—' }}</td></tr>
     @if (!empty($m['tarjeta']))
         <tr><td class="k">Tarjeta</td><td class="v">{{ $m['tarjeta'] }}</td></tr>
     @endif
@@ -51,6 +51,21 @@
         <tr><td class="k">Observaciones</td><td class="v" style="font-weight:normal">{{ $m['observaciones'] }}</td></tr>
     @endif
 </table>
+
+@if (!empty($lineas))
+    <table class="meta" style="margin-top:8px">
+        <tr>
+            <td class="k" style="width:70%;font-weight:bold;color:#1c1a19">Concepto</td>
+            <td class="v" style="text-align:right">Monto</td>
+        </tr>
+        @foreach ($lineas as $l)
+            <tr>
+                <td style="font-size:10px">{{ $l['concepto'] }}</td>
+                <td style="text-align:right;font-weight:bold">${{ $money($l['monto']) }}</td>
+            </tr>
+        @endforeach
+    </table>
+@endif
 
 <div class="amount">
     <div class="lab">Monto del anticipo solicitado</div>

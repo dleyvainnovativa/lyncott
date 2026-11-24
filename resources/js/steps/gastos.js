@@ -13,9 +13,18 @@ export function initGastos(Lx) {
   const panel = document.querySelector('[data-step="gastos"]');
   if (!panel) return;
 
-  const CATS = Array.isArray(window.LX_CATS) && window.LX_CATS.length
-    ? window.LX_CATS
-    : ['HOTEL', 'TRANSPORTACION AEREA', 'ALIMENTOS', 'VARIOS (Herramienta o material)'];
+  // Category catalogs (client-defined):
+  //  - con factura: keyed by the comprobación's Tipo de Gasto.
+  //  - sin factura: one independent flat list (no tipo dependency).
+  const RAW = window.LX_CATS || {};
+  const CON = (RAW.con_factura && typeof RAW.con_factura === 'object') ? RAW.con_factura : {};
+  const SIN = Array.isArray(RAW.sin_factura) ? RAW.sin_factura : [];
+  const FALLBACK = ['HOTEL', 'TRANSPORTACION AEREA', 'ALIMENTOS', 'VARIOS'];
+
+  const tipoGasto = () => (Lx.Wizard.state.viaje && Lx.Wizard.state.viaje.tipo_gasto) || '';
+  const conList = () => CON[tipoGasto()] || Object.values(CON)[0] || FALLBACK;
+  // Options for a given row: sin-factura -> flat list; con-factura -> tipo catalog.
+  const catsFor = (r) => (r.tipo === 'sf' ? (SIN.length ? SIN : FALLBACK) : conList());
 
   let data = [];
   let ID = 0;
@@ -147,8 +156,8 @@ export function initGastos(Lx) {
     if (/RESTAUR|ALIMENT|CAFE|COMEDOR|TAQUE|COCINA/.test(s))                            return pick('ALIMENT');
     return '';
   }
-  // Match a keyword to whichever catalog entry contains it (keeps us in sync with config).
-  const pick = (kw) => CATS.find((c) => c.toUpperCase().includes(kw)) || '';
+  // Match a keyword to an entry in the active con-factura catalog (auto-suggest for XML rows).
+  const pick = (kw) => conList().find((c) => c.toUpperCase().includes(kw)) || '';
 
   /* ---- file helpers ---- */
   const fileToDataUri = (file) => new Promise((res, rej) => {
@@ -223,7 +232,8 @@ export function initGastos(Lx) {
       ((r.co + r.rfc + r.cat).toLowerCase().includes(needle)));
 
     const cs = cards();
-    const showCard = cs.length > 0;
+    // Show the Tarjeta column only when there's a real choice (more than one card).
+    const showCard = cs.length > 1;
     if (cardTh) cardTh.hidden = !showCard;
     // One card -> auto-assign the same card to every row.
     if (cs.length === 1) data.forEach((r) => {
@@ -231,8 +241,12 @@ export function initGastos(Lx) {
     });
 
     rowsEl.innerHTML = list.length ? list.map((r) => {
-      const opts = (r.cat ? '' : '<option value="" selected>— selecciona —</option>') +
-        CATS.map((c) => `<option ${c === r.cat ? 'selected' : ''}>${esc(c)}</option>`).join('');
+      const catList = catsFor(r);
+      const offList = r.cat && !catList.includes(r.cat);
+      const opts = (r.cat
+          ? (offList ? `<option value="${esc(r.cat)}" selected>${esc(r.cat)}</option>` : '')
+          : '<option value="" selected>— selecciona —</option>') +
+        catList.map((c) => `<option ${c === r.cat ? 'selected' : ''}>${esc(c)}</option>`).join('');
       const chips = r.tipo === 'cf' ? `
         <div class="mt-1 d-flex gap-1">
           <span class="lx-pill lx-pill--cf" title="${esc(r.xmlName || '')}"><i class="fa-solid fa-code"></i> XML</span>
@@ -315,26 +329,14 @@ export function initGastos(Lx) {
   }));
   dropEl.addEventListener('drop', (e) => { if (e.dataTransfer.files.length) readXmlFiles(e.dataTransfer.files); });
 
-  /* ---- sample XML (valid CFDI 4.0) ---- */
-  q('#btnDemoXml').addEventListener('click', () => {
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" Fecha="2026-05-08T11:14:00" SubTotal="6352.50" Total="7368.90" Moneda="MXN">
-  <cfdi:Emisor Rfc="ITI171211PZ2" Nombre="INNOVA TRAVEL INCOMING SERVICES" RegimenFiscal="601"/>
-  <cfdi:Receptor Rfc="LAL1203015A1" Nombre="LYNCOTT ALIMENTARIA"/>
-  <cfdi:Complemento>
-    <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" Version="1.1" UUID="ED385009-F7FB-464D-AC84-3474EE33FF4A"/>
-  </cfdi:Complemento>
-</cfdi:Comprobante>`;
-    addFromXmlFile(new File([xml], 'ejemplo_innova.xml', { type: 'text/xml' }));
-  });
-
   /* ---- modal ---- */
   let mode = 'sf';
   const seg = q('#segTipo');
   const sfFields = q('#sfFields');
   const cfFields = q('#cfFields');
   const mCat = q('#mCat');
-  mCat.innerHTML = CATS.map((c) => `<option>${esc(c)}</option>`).join('');
+  // The add-gasto modal captures "sin factura" rows -> independent flat list.
+  mCat.innerHTML = (SIN.length ? SIN : FALLBACK).map((c) => `<option>${esc(c)}</option>`).join('');
 
   q('#btnAddGasto').addEventListener('click', () => {
     q('#mFecha').value = new Date().toISOString().slice(0, 10);

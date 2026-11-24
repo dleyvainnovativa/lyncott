@@ -12,15 +12,16 @@ import { Spanish } from 'flatpickr/dist/l10n/es.js';
 
 const FLOW = {
   anticipo: {
-    hide:     ['folio_anticipo'],
-    required: ['monto_anticipo', 'centro_costos', 'sucursal', 'clabe', 'banco', 'tipo_gasto'],
+    // Monto moves to the "Desglose" step; banco/referencia/moneda are hidden for anticipo.
+    hide:     ['folio_anticipo', 'monto_anticipo', 'banco', 'referencia', 'moneda'],
+    required: ['centro_costos', 'sucursal', 'clabe', 'tipo_gasto', 'fecha_dispersacion'],
     optional: ['observaciones'],
     clabeDigits: true,
   },
   comprobacion: {
-    hide:     ['monto_anticipo'],
+    hide:     ['monto_anticipo', 'fecha_dispersacion'],
     required: ['clabe', 'banco'],
-    optional: ['folio_anticipo', 'tipo_gasto', 'centro_costos', 'sucursal', 'observaciones'],
+    optional: ['folio_anticipo', 'tipo_gasto', 'centro_costos', 'sucursal', 'observaciones', 'referencia', 'moneda'],
     clabeDigits: false,
   },
 };
@@ -117,7 +118,15 @@ export function initViaje(Lx) {
   function applyFlow(state) {
     flujo = state.flujo || 'comprobacion';
     const cfg = FLOW[flujo];
-    const allFields = ['monto_anticipo', 'folio_anticipo', 'tipo_gasto', 'centro_costos', 'banco', 'clabe', 'sucursal', 'observaciones'];
+    const allFields = ['monto_anticipo', 'folio_anticipo', 'tipo_gasto', 'centro_costos', 'banco', 'clabe', 'sucursal', 'referencia', 'moneda', 'fecha_dispersacion', 'observaciones'];
+
+    // "Sucursal" is "Destino / Concepto" in the anticipo flow. Rebuild the label
+    // (keeping its required marker) before the loop fills the marker text.
+    const sucLabel = panel.querySelector('[data-label="sucursal"]');
+    if (sucLabel) {
+      sucLabel.innerHTML = (flujo === 'anticipo' ? 'Destino / Concepto ' : 'Sucursal ')
+        + '<span class="lx-req" data-req="sucursal"></span>';
+    }
 
     allFields.forEach((name) => {
       const wrap = field(name);
@@ -180,7 +189,6 @@ export function initViaje(Lx) {
       if (state.flujo === 'anticipo') {
         const cards = (state.tarjetas || []).filter((t) => t && t.numero);
         if (cards.length && !el('tarjeta').value) return fail(el('tarjeta'), 'Selecciona la tarjeta del anticipo.');
-        if (!(parseFloat(el('monto_anticipo').value) > 0)) return fail(el('monto_anticipo'), 'Captura el monto del anticipo.');
         if (!/^\d{18}$/.test(el('clabe').value)) return fail(el('clabe'), 'La CLABE debe tener 18 dígitos.');
       }
       return true;

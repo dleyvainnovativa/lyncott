@@ -14,6 +14,7 @@ class Comprobacion extends Model
     protected $casts = [
         'fecha_salida'       => 'date',
         'fecha_regreso'      => 'date',
+        'fecha_dispersacion' => 'date',
         'dias'               => 'integer',
         'noches'             => 'integer',
         'monto_anticipo'     => 'decimal:2',

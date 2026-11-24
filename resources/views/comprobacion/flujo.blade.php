@@ -34,6 +34,12 @@
             @include('comprobacion.steps._viaje')
         </section>
 
+        @if ($flujo === 'anticipo')
+            <section data-step="desglose" hidden>
+                @include('comprobacion.steps._desglose')
+            </section>
+        @endif
+
         @if ($flujo === 'comprobacion')
             <section data-step="gastos" hidden>
                 @include('comprobacion.steps._gastos')
