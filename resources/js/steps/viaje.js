@@ -19,9 +19,10 @@ const FLOW = {
     clabeDigits: true,
   },
   comprobacion: {
-    hide:     ['monto_anticipo', 'fecha_dispersacion'],
-    required: ['clabe', 'banco'],
-    optional: ['folio_anticipo', 'tipo_gasto', 'centro_costos', 'sucursal', 'observaciones', 'referencia', 'moneda'],
+    // Banco/referencia/moneda are hidden in both flows now (defaults sent server-side).
+    hide:     ['monto_anticipo', 'fecha_dispersacion', 'banco', 'referencia', 'moneda'],
+    required: ['clabe'],
+    optional: ['folio_anticipo', 'tipo_gasto', 'centro_costos', 'sucursal', 'observaciones'],
     clabeDigits: false,
   },
 };

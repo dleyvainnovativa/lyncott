@@ -15,8 +15,8 @@
             <div><div class="lx-review__k">Nombre</div><div class="lx-review__v" data-rv="nombre">—</div></div>
             <div><div class="lx-review__k">Correo electrónico</div><div class="lx-review__v" data-rv="correo">—</div></div>
             <div><div class="lx-review__k">Número de empleado</div><div class="lx-review__v lx-mono" data-rv="numero">—</div></div>
-            <div><div class="lx-review__k">Departamento</div><div class="lx-review__v" data-rv="departamento">—</div></div>
-            <div><div class="lx-review__k">Puesto</div><div class="lx-review__v" data-rv="puesto">—</div></div>
+            <div data-rv-wrap="departamento"><div class="lx-review__k">Departamento</div><div class="lx-review__v" data-rv="departamento">—</div></div>
+            <div data-rv-wrap="puesto"><div class="lx-review__k">Puesto</div><div class="lx-review__v" data-rv="puesto">—</div></div>
             <div><div class="lx-review__k">Centro de costos</div><div class="lx-review__v" data-rv="centro">—</div></div>
         </div>
     </div>
@@ -28,7 +28,7 @@
             <div><div class="lx-review__k">Fecha del gasto 2</div><div class="lx-review__v lx-mono" data-rv="fecha2">—</div></div>
             <div><div class="lx-review__k">Duración</div><div class="lx-review__v" data-rv="duracion">—</div></div>
             <div><div class="lx-review__k">Tipo de gasto</div><div class="lx-review__v" data-rv="tipo">—</div></div>
-            <div><div class="lx-review__k">Banco</div><div class="lx-review__v" data-rv="banco">—</div></div>
+            <div data-rv-wrap="banco"><div class="lx-review__k">Banco</div><div class="lx-review__v" data-rv="banco">—</div></div>
             <div><div class="lx-review__k">CLABE</div><div class="lx-review__v lx-mono" data-rv="clabe">—</div></div>
             <div><div class="lx-review__k">Centro de costos</div><div class="lx-review__v" data-rv="vcentro">—</div></div>
             <div><div class="lx-review__k">Sucursal</div><div class="lx-review__v" data-rv="sucursal">—</div></div>

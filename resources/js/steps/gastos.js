@@ -28,6 +28,7 @@ export function initGastos(Lx) {
 
   let data = [];
   let ID = 0;
+  let lastTipo = null;   // tracks the Tipo de Gasto the rows were categorized under
 
   const q  = (sel) => panel.querySelector(sel);
   const rowsEl   = q('#lxRows');
@@ -379,8 +380,15 @@ export function initGastos(Lx) {
       if (Array.isArray(state.gastos) && state.gastos.length && !data.length) {
         data = state.gastos;
         ID = data.reduce((m, r) => Math.max(m, r.id || 0), 0);
-        render();
       }
+      // If the Tipo de Gasto changed, the con-factura catalog changed too:
+      // clear each invoice (con factura) row's category so its select refreshes.
+      const t = tipoGasto();
+      if (lastTipo !== null && t !== lastTipo) {
+        data.forEach((r) => { if (r.tipo === 'cf') { r.cat = ''; r.auto = false; } });
+      }
+      lastTipo = t;
+      render();
     },
     validate() {
       if (!data.length) { Lx.toast.error('Agrega al menos un gasto para continuar.'); return false; }

@@ -35,7 +35,7 @@ export function initRevisar(Lx) {
     setRv('fecha2', v.fecha_gasto_2 || '—');
     setRv('duracion', v.dias ? `${v.dias} días y ${v.noches} noches` : '—');
     setRv('tipo', v.tipo_gasto || '—');
-    setRv('banco', v.banco || '—');
+    setRv('banco', v.banco || s.banco || '—');
     setRv('clabe', v.clabe || '—');
     setRv('vcentro', v.centro_costos || '—');
     setRv('sucursal', v.sucursal || '—');
@@ -55,6 +55,11 @@ export function initRevisar(Lx) {
     panel.querySelector('#rvAnticipo').hidden = !anticipo;   // monto tile (anticipo)
     panel.querySelector('#rvTotales').hidden = anticipo;     // gastos totals (comprobación)
     panel.querySelector('[data-rv-wrap="folio"]').hidden = anticipo; // folio row only for comprobación
+    // Anticipo review omits banco / departamento / puesto.
+    ['banco', 'departamento', 'puesto'].forEach((k) => {
+      const w = panel.querySelector(`[data-rv-wrap="${k}"]`);
+      if (w) w.hidden = anticipo;
+    });
   }
 
   // Strip base64 before asking for the preview (keeps the request light).
@@ -88,7 +93,7 @@ export function initRevisar(Lx) {
         'X-Requested-With': 'XMLHttpRequest',
       },
       credentials: 'same-origin',
-      body: JSON.stringify({ flujo: state.flujo, solicitante: state.solicitante, viaje: state.viaje, gastos: lightGastos(gastos) }),
+      body: JSON.stringify({ flujo: state.flujo, solicitante: state.solicitante, viaje: state.viaje, gastos: lightGastos(gastos), desglose: state.desglose || {} }),
     });
     if (!res.ok) throw new Error('pdf');
     const url = URL.createObjectURL(await res.blob());

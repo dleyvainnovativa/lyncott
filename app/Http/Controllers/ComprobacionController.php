@@ -150,7 +150,10 @@ class ComprobacionController extends Controller
         $flujo = $request->input('flujo', 'comprobacion');
 
         if ($flujo === 'anticipo') {
-            return Pdf::loadView('pdf.anticipo', $this->buildAnticipoPdfData($sol, $viaje))
+            $desglose = (array) $request->input('desglose', []);
+            // Preview reflects what will be sent: compute the monto from the desglose.
+            $viaje['monto_anticipo'] = self::sumaDesglose($desglose) ?: (float) ($viaje['monto_anticipo'] ?? 0);
+            return Pdf::loadView('pdf.anticipo', $this->buildAnticipoPdfData($sol, $viaje, $desglose))
                 ->setPaper('letter')->stream('anticipo.pdf');
         }
 
