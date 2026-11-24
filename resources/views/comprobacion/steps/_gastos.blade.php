@@ -76,7 +76,7 @@
         <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
         <input type="text" class="form-control" id="lxSearch" placeholder="Buscar por emisor, RFC o categoría…">
     </div>
-    <button type="button" class="btn btn-lx-sub" id="btnValidarTodas">
+    <button type="button" class="btn btn-lx-ok" id="btnValidarTodas">
         <i class="fa-solid fa-shield-halved me-1"></i> Validar todas
     </button>
     <span class="ms-auto" style="font-size:.82rem;color:var(--lx-muted)" data-tile="count">0 gastos</span>

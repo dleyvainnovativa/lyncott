@@ -64,8 +64,7 @@
     <div class="lx-review__card" id="rvPdfCard">
         <div class="lx-review__title"><i class="fa-regular fa-file-pdf"></i> Vista previa — DETALLE DE GASTOS</div>
         <div id="pdfWrap" style="position:relative;min-height:220px">
-            <div id="pdfLoading" class="lx-empty"><i class="fa-solid fa-spinner fa-spin me-2"></i>Generando vista previa…</div>
-            <iframe id="pdfPreview" class="lx-pdf-frame" title="Vista previa del PDF" hidden></iframe>
+            <div class="lx-empty"><i class="fa-solid fa-spinner fa-spin me-2"></i>Generando vista previa…</div>
         </div>
     </div>
 

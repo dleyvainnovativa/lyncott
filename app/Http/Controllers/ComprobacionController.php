@@ -59,20 +59,17 @@ class ComprobacionController extends Controller
     {
         $data = $request->validate([
             'numero_empleado' => ['required', 'string', 'max:30'],
-            'rfc'             => ['required', 'string', 'max:13'],
         ], [], [
             'numero_empleado' => 'número de empleado',
-            'rfc'             => 'RFC',
         ]);
 
         $empleado = Empleado::query()
             ->where('numero_empleado', $data['numero_empleado'])
-            ->whereRaw('UPPER(rfc) = ?', [mb_strtoupper($data['rfc'])])
             ->first();
 
         if (! $empleado) {
             return response()->json([
-                'message' => 'No encontramos un empleado con ese número y RFC. Verifica los datos.',
+                'message' => 'No encontramos un empleado con ese número. Verifica el dato.',
             ], 404);
         }
 
@@ -202,13 +199,13 @@ class ComprobacionController extends Controller
         });
 
         // Aggregate across the one-or-more comprobaciones created.
-        $comps     = array_map(fn ($r) => $r['comprobacion'], $resultados);
+        $comps     = array_map(fn($r) => $r['comprobacion'], $resultados);
         $first     = $resultados[0];
-        $allSent   = count(array_filter($resultados, fn ($r) => $r['sent'])) === count($resultados);
-        $anyLive   = (bool) array_filter($resultados, fn ($r) => $r['live']);
-        $fileCount = array_sum(array_map(fn ($r) => (int) $r['payloadRecord']->file_count, $resultados));
+        $allSent   = count(array_filter($resultados, fn($r) => $r['sent'])) === count($resultados);
+        $anyLive   = (bool) array_filter($resultados, fn($r) => $r['live']);
+        $fileCount = array_sum(array_map(fn($r) => (int) $r['payloadRecord']->file_count, $resultados));
 
-        $lista = array_map(fn ($r) => [
+        $lista = array_map(fn($r) => [
             'folio'      => $r['comprobacion']->folio(),
             'tarjeta'    => trim((string) ($r['comprobacion']->tarjeta_nombre ?? '')
                 . (($r['comprobacion']->tarjeta_numero ?? '') ? ' · ' . $r['comprobacion']->tarjeta_numero : '')) ?: 'Sin tarjeta',
@@ -233,10 +230,10 @@ class ComprobacionController extends Controller
             'file_count'      => $fileCount,
             'tipo_solicitud'  => $flujo,
             'resumen'         => [
-                'con_factura' => array_sum(array_map(fn ($c) => (float) $c->total_con_factura, $comps)),
-                'sin_factura' => array_sum(array_map(fn ($c) => (float) $c->total_sin_factura, $comps)),
-                'iva'         => array_sum(array_map(fn ($c) => (float) $c->iva_total, $comps)),
-                'total'       => array_sum(array_map(fn ($c) => (float) $c->monto_comprobacion, $comps)),
+                'con_factura' => array_sum(array_map(fn($c) => (float) $c->total_con_factura, $comps)),
+                'sin_factura' => array_sum(array_map(fn($c) => (float) $c->total_sin_factura, $comps)),
+                'iva'         => array_sum(array_map(fn($c) => (float) $c->iva_total, $comps)),
+                'total'       => array_sum(array_map(fn($c) => (float) $c->monto_comprobacion, $comps)),
                 'anticipo'    => (float) $first['comprobacion']->monto_anticipo,
             ],
             'comprobaciones'  => $lista,
@@ -419,7 +416,7 @@ class ComprobacionController extends Controller
 
         // "Comprobado por" / Referencia: the card when there's a single one, else the employee.
         $cards = array_values(array_unique(array_filter(array_map(
-            fn ($g) => trim((string) ($g['tarjeta_nombre'] ?? '')),
+            fn($g) => trim((string) ($g['tarjeta_nombre'] ?? '')),
             $gastos,
         ))));
         $comprobadoPor = count($cards) === 1 ? $cards[0] : ($sol['nombre_completo'] ?? '—');
@@ -432,7 +429,7 @@ class ComprobacionController extends Controller
 
         return [
             'logo'  => $logo,
-            'money' => fn ($n) => number_format((float) $n, 2),
+            'money' => fn($n) => number_format((float) $n, 2),
             'meta'  => [
                 'empresa'        => 'LYNCOTT ALIMENTARIA S.A.P.I. DE C.V.',
                 'titulo'         => 'COMPROBACION GASTOS',

@@ -1,6 +1,6 @@
 /* ==========================================================================
    Step 1 · Datos del Solicitante
-   Looks up an employee by número + RFC and fills the read-only fields.
+   Looks up an employee by número de empleado and fills the read-only fields.
    Registers the wizard hook so "Siguiente" is blocked until an employee
    is validated. Keeps the fetched record in central wizard state.
    ========================================================================== */
@@ -10,9 +10,8 @@ export function initSolicitante(Lx) {
   if (!panel) return;
 
   const numero = panel.querySelector('#numero_empleado');
-  const rfc    = panel.querySelector('#rfc');
   const btn    = panel.querySelector('#btnBuscar');
-  const wraps  = [numero.closest('.lx-input-wrap'), rfc.closest('.lx-input-wrap')];
+  const wraps  = [numero.closest('.lx-input-wrap')];
 
   let empleado = null;
   let tarjetas = [];
@@ -27,17 +26,14 @@ export function initSolicitante(Lx) {
 
   // Typing again invalidates the previous match.
   numero.addEventListener('input', clearResult);
-  rfc.addEventListener('input', clearResult);
 
   async function buscar() {
     const n = numero.value.trim();
-    const r = rfc.value.trim().toUpperCase();
-    rfc.value = r;
-    if (!n || !r) { Lx.toast.error('Captura número de empleado y RFC.'); return; }
+    if (!n) { Lx.toast.error('Captura el número de empleado.'); return; }
 
     try {
       const res = await Lx.loading.button(btn, () =>
-        Lx.http.post(window.LX_ROUTES.empleadoBuscar, { numero_empleado: n, rfc: r }));
+        Lx.http.post(window.LX_ROUTES.empleadoBuscar, { numero_empleado: n }));
       empleado = res.empleado ?? res;
       tarjetas = res.tarjetas ?? [];
       fill(empleado);
@@ -50,7 +46,7 @@ export function initSolicitante(Lx) {
   }
 
   btn.addEventListener('click', buscar);
-  rfc.addEventListener('keydown', (e) => {
+  numero.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); buscar(); }
   });
 
@@ -66,7 +62,6 @@ export function initSolicitante(Lx) {
         empleado = state.solicitante;
         tarjetas = state.tarjetas ?? [];
         numero.value = empleado.numero_empleado ?? '';
-        rfc.value = empleado.rfc ?? '';
         fill(empleado);
         setOk(true);
       }

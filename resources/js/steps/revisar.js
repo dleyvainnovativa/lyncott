@@ -12,7 +12,9 @@ export function initRevisar(Lx) {
 
   const q = (s) => panel.querySelector(s);
   const money = Lx.money;
-  let pdfUrl = null;
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let pdfUrls = [];   // object URLs to revoke on reload
 
   const setRv = (k, v) => { const el = panel.querySelector(`[data-rv="${k}"]`); if (el) el.textContent = v; };
   const setEx = (k, v) => { const el = panel.querySelector(`[data-ex="${k}"]`); if (el) el.textContent = v; };
@@ -56,37 +58,95 @@ export function initRevisar(Lx) {
   }
 
   // Strip base64 before asking for the preview (keeps the request light).
-  function lightGastos(state) {
-    return (state.gastos || []).map(({ xmlB64, pdfB64, ...rest }) => rest);
+  const lightGastos = (gastos) => (gastos || []).map(({ xmlB64, pdfB64, ...rest }) => rest);
+
+  // Group gastos by card using the SAME key the server uses in enviar():
+  // tarjeta_numero (trimmed) or 'sin-tarjeta'. Each group becomes one PDF tab,
+  // mirroring the one-comprobación-per-card submission.
+  function groupByCard(gastos) {
+    const groups = new Map();
+    for (const g of (gastos || [])) {
+      const num = String(g.tarjeta_numero || '').trim();
+      const key = num || 'sin-tarjeta';
+      if (!groups.has(key)) {
+        const nombre = g.tarjeta_nombre || '';
+        groups.set(key, { key, nombre, num, label: num ? (nombre || 'Tarjeta') : 'Sin tarjeta', gastos: [] });
+      }
+      groups.get(key).gastos.push(g);
+    }
+    return [...groups.values()];
   }
 
-  async function loadPdf(state) {
-    const loading = q('#pdfLoading');
-    const frame = q('#pdfPreview');
-    loading.hidden = false;
-    frame.hidden = true;
+  // Fetch one preview PDF for a given set of gastos; returns an object URL.
+  async function fetchPdf(state, gastos) {
+    const res = await fetch(window.LX_ROUTES.comprobacionPdf, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/pdf',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ flujo: state.flujo, solicitante: state.solicitante, viaje: state.viaje, gastos: lightGastos(gastos) }),
+    });
+    if (!res.ok) throw new Error('pdf');
+    const url = URL.createObjectURL(await res.blob());
+    pdfUrls.push(url);
+    return url;
+  }
+
+  // Render a single preview into a wrapper (spinner -> iframe).
+  async function loadInto(state, gastos, wrap) {
+    wrap.innerHTML = '<div class="lx-empty"><i class="fa-solid fa-spinner fa-spin me-2"></i>Generando vista previa…</div>'
+      + '<iframe class="lx-pdf-frame" title="Vista previa del PDF" hidden></iframe>';
+    const loading = wrap.querySelector('.lx-empty');
+    const frame = wrap.querySelector('iframe');
     try {
-      const res = await fetch(window.LX_ROUTES.comprobacionPdf, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/pdf',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'same-origin',
-        body: JSON.stringify({ flujo: state.flujo, solicitante: state.solicitante, viaje: state.viaje, gastos: lightGastos(state) }),
-      });
-      if (!res.ok) throw new Error('pdf');
-      const blob = await res.blob();
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-      pdfUrl = URL.createObjectURL(blob);
-      frame.src = pdfUrl;
+      frame.src = await fetchPdf(state, gastos);
       frame.hidden = false;
       loading.hidden = true;
     } catch {
       loading.innerHTML = '<span style="color:var(--lx-red)">No se pudo generar la vista previa del PDF.</span>';
     }
+  }
+
+  async function loadPdf(state) {
+    const wrap = q('#pdfWrap');
+    pdfUrls.forEach(URL.revokeObjectURL);
+    pdfUrls = [];
+
+    // Anticipo (single summary PDF) and single-card comprobación: no tabs.
+    const groups = state.flujo === 'anticipo' ? [] : groupByCard(state.gastos);
+    if (groups.length <= 1) {
+      await loadInto(state, groups[0] ? groups[0].gastos : (state.gastos || []), wrap);
+      return;
+    }
+
+    // Multiple cards: one tab + one lazy-loaded pane per card.
+    const tabs = groups.map((g, i) =>
+      `<button type="button" class="lx-pdftab ${i === 0 ? 'is-on' : ''}" data-tab="${i}">
+         <i class="fa-regular fa-credit-card"></i> ${esc(g.label)}
+         ${g.num ? `<span class="lx-pdftab-num">${esc(g.num)}</span>` : ''}
+       </button>`).join('');
+    const panes = groups.map((g, i) =>
+      `<div class="lx-pdfpane" data-pane="${i}" style="position:relative;min-height:220px" ${i === 0 ? '' : 'hidden'}></div>`).join('');
+    wrap.innerHTML = `<div class="lx-pdftabs" role="tablist">${tabs}</div>${panes}`;
+
+    const loaded = new Set();
+    const activate = async (i) => {
+      wrap.querySelectorAll('.lx-pdftab').forEach((t) => t.classList.toggle('is-on', String(t.dataset.tab) === String(i)));
+      wrap.querySelectorAll('.lx-pdfpane').forEach((p) => { p.hidden = String(p.dataset.pane) !== String(i); });
+      if (!loaded.has(i)) {
+        loaded.add(i);
+        await loadInto(state, groups[i].gastos, wrap.querySelector(`.lx-pdfpane[data-pane="${i}"]`));
+      }
+    };
+    wrap.querySelector('.lx-pdftabs').addEventListener('click', (e) => {
+      const b = e.target.closest('.lx-pdftab');
+      if (b) activate(+b.dataset.tab);
+    });
+    await activate(0);   // first tab eager; the rest load on click
   }
 
   Lx.Wizard.registerStep('revisar', {

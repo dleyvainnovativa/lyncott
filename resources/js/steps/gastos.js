@@ -64,10 +64,15 @@ export function initGastos(Lx) {
       return `<td data-label="Validación"><button type="button" class="lx-val lx-valchip ${cls}" data-valshow="${r.id}" title="Ver detalle"><i class="fa-solid ${ico}"></i> ${txt}</button></td>`;
     }
     if (v.status === 'error') {
-      return `<td data-label="Validación"><button type="button" class="lx-val lx-valchip lx-val-bad" data-validar="${r.id}" title="${esc(v.msg || 'Error')}"><i class="fa-solid fa-rotate-right"></i> Reintentar</button></td>`;
+      // Passive chip — re-validation happens only through "Validar todas".
+      return `<td data-label="Validación"><span class="lx-val lx-valchip lx-val-bad" title="${esc(v.msg || 'Error')}"><i class="fa-solid fa-circle-exclamation"></i> Error</span></td>`;
     }
-    return `<td data-label="Validación"><button type="button" class="lx-val lx-val-btn" data-validar="${r.id}">Validar</button></td>`;
+    // Idle: passive "Pendiente" chip (no row-level trigger; use "Validar todas").
+    return `<td data-label="Validación"><span class="lx-val lx-val-na"><i class="fa-regular fa-clock"></i> Pendiente</span></td>`;
   }
+
+  // A cleanly-validated invoice (válido, not duplicado) is locked and cannot be removed.
+  const isLocked = (r) => !!(r.val && r.val.status === 'valido' && !(r.val.data && r.val.data.duplicado));
 
   async function validarRow(id, { silent = false } = {}) {
     const r = data.find((x) => String(x.id) === String(id));
@@ -247,7 +252,9 @@ export function initGastos(Lx) {
         <td data-label="Importe" class="lx-num">${money(r.total)}</td>
         <td data-label="IVA" class="lx-num" style="color:var(--lx-muted)">${money(ivaOf(r))}</td>
         ${valCell(r)}
-        <td class="lx-actcell"><button type="button" class="lx-del" data-del="${r.id}" aria-label="Eliminar"><i class="fa-solid fa-trash-can"></i></button></td>
+        <td class="lx-actcell">${isLocked(r)
+          ? '<span class="lx-del is-locked" title="Comprobante validado: no se puede eliminar"><i class="fa-solid fa-lock"></i></span>'
+          : `<button type="button" class="lx-del" data-del="${r.id}" aria-label="Eliminar"><i class="fa-solid fa-trash-can"></i></button>`}</td>
       </tr>`;
     }).join('') : `<tr><td colspan="${showCard ? 9 : 8}" class="lx-empty">Aún no hay gastos. Arrastra un XML o agrega un gasto sin factura.</td></tr>`;
 
@@ -270,9 +277,11 @@ export function initGastos(Lx) {
   /* ---- table interactions ---- */
   rowsEl.addEventListener('click', (e) => {
     const b = e.target.closest('[data-del]');
-    if (b) { data = data.filter((r) => String(r.id) !== b.dataset.del); render(); return; }
-    const vb = e.target.closest('[data-validar]');
-    if (vb) { validarRow(vb.dataset.validar); return; }
+    if (b) {
+      const r = data.find((x) => String(x.id) === b.dataset.del);
+      if (r && isLocked(r)) { Lx.toast.error('El comprobante está validado y no se puede eliminar.'); return; }
+      data = data.filter((x) => String(x.id) !== b.dataset.del); render(); return;
+    }
     const vs = e.target.closest('[data-valshow]');
     if (vs) { showValidacion(vs.dataset.valshow); return; }
   });

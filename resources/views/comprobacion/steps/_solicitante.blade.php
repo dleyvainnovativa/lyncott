@@ -13,7 +13,7 @@
     <div class="lx-card p-4 mt-3">
         {{-- Lookup keys --}}
         <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-8">
                 <label class="form-label" for="numero_empleado">Número de empleado *</label>
                 <div class="lx-input-wrap">
                     <input type="text" class="form-control" id="numero_empleado"
@@ -21,16 +21,8 @@
                     <i class="fa-solid fa-circle-check lx-ok-check" aria-hidden="true"></i>
                 </div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label" for="rfc">RFC *</label>
-                <div class="lx-input-wrap">
-                    <input type="text" class="form-control text-uppercase" id="rfc"
-                        name="rfc" maxlength="13" placeholder="Ej. PASK820101XYZ">
-                    <i class="fa-solid fa-circle-check lx-ok-check" aria-hidden="true"></i>
-                </div>
-            </div>
-            <div class="col-12 d-flex justify-content-end">
-                <button type="button" id="btnBuscar" class="btn btn-lx">
+            <div class="col-md-4 d-flex align-items-end justify-content-end">
+                <button type="button" id="btnBuscar" class="btn btn-lx w-100">
                     <i class="fa-solid fa-magnifying-glass me-1"></i> Buscar
                 </button>
             </div>
