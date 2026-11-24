@@ -399,6 +399,7 @@
                     @if (!empty($authError))
                         <div class="lx-welcome__alert">{{ $authError }}</div>
                     @endif
+                    <div id="authMsg" class="lx-welcome__alert" style="display:none; white-space:pre-wrap"></div>
                     <div class="lx-welcome__actions">
                         <button type="button" id="btnMsLogin" class="lx-wbtn lx-wbtn--primary">
                             <i class="fa-brands fa-microsoft"></i> Entrar con Microsoft
@@ -446,17 +447,37 @@
     {{-- Firebase Microsoft sign-in (full-page redirect). Inert until LX_FIREBASE.apiKey is set. --}}
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-        import { getAuth, OAuthProvider, signInWithRedirect, getRedirectResult }
+        import { getAuth, OAuthProvider, signInWithPopup }
             from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
+        const showAuthError = (msg) => {
+            const box = document.getElementById('authMsg');
+            if (box) { box.textContent = msg; box.style.display = 'block'; }
+            else { alert(msg); }
+        };
+
         const cfg = window.LX_FIREBASE || {};
-        if (cfg.apiKey) {
+        console.log('[auth] firebase config present:', !!cfg.apiKey, '| tenant:', cfg.tenant || '(none)');
+        if (!cfg.apiKey) {
+            console.warn('[auth] LX_FIREBASE.apiKey missing — sign-in is inert. Set FIREBASE_* in .env (and run php artisan config:clear).');
+        } else {
             const auth = getAuth(initializeApp(cfg));
 
-            // Back from the Microsoft redirect: exchange the ID token for a Laravel session.
-            try {
-                const result = await getRedirectResult(auth);
-                if (result && result.user) {
+            // Popup sign-in (robust against third-party-storage partitioning that
+            // breaks signInWithRedirect on modern browsers).
+            document.getElementById('btnMsLogin')?.addEventListener('click', async () => {
+                const provider = new OAuthProvider('microsoft.com');
+                provider.addScope('openid');
+                provider.addScope('email');
+                provider.addScope('profile');
+                // 'common' allows BOTH work/school and personal (outlook.com) accounts.
+                provider.setCustomParameters({ tenant: cfg.tenant || 'common' });
+
+                try {
+                    console.log('[auth] opening Microsoft popup… (tenant:', cfg.tenant || 'common', ')');
+                    const result = await signInWithPopup(auth, provider);
+                    console.log('[auth] signed in as', result.user.email, '| emailVerified:', result.user.emailVerified);
+
                     const idToken = await result.user.getIdToken();
                     const resp = await fetch(window.LX_AUTH.loginUrl, {
                         method: 'POST',
@@ -468,18 +489,18 @@
                         body: JSON.stringify({ idToken }),
                     });
                     const data = await resp.json().catch(() => ({}));
-                    if (data.ok) { window.location.href = data.redirect || window.LX_AUTH.welcomeUrl; }
-                    else { alert(data.message || 'No se pudo iniciar sesión.'); }
-                }
-            } catch (e) { console.error('getRedirectResult', e); }
+                    console.log('[auth] POST /auth/firebase →', resp.status, data);
 
-            document.getElementById('btnMsLogin')?.addEventListener('click', () => {
-                const provider = new OAuthProvider('microsoft.com');
-                provider.addScope('openid');
-                provider.addScope('email');
-                provider.addScope('profile');
-                if (cfg.tenant) provider.setCustomParameters({ tenant: cfg.tenant });
-                signInWithRedirect(auth, provider);
+                    if (data.ok) {
+                        window.location.href = data.redirect || window.LX_AUTH.welcomeUrl;
+                    } else {
+                        const extra = data.debug ? '\n\n' + JSON.stringify(data.debug, null, 2) : '';
+                        showAuthError((data.message || 'No se pudo iniciar sesión.') + extra);
+                    }
+                } catch (e) {
+                    console.error('[auth] signInWithPopup error:', e);
+                    showAuthError('Error de autenticación: ' + (e.code ? e.code + ' — ' : '') + (e.message || e));
+                }
             });
         }
     </script>

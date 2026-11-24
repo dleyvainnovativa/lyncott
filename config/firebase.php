@@ -29,6 +29,11 @@ return [
     // Service-account JSON path (absolute, or relative to the project root).
     'credentials' => env('FIREBASE_CREDENTIALS'),
 
+    // Require the provider to report the email as verified. Personal Microsoft
+    // accounts (outlook.com/hotmail) often come back unverified — set this to
+    // false in .env to test with them.
+    'require_verified_email' => (bool) env('FIREBASE_REQUIRE_VERIFIED_EMAIL', true),
+
     // Email domains allowed to sign in.
     'allowed_domains' => array_values(array_filter(array_map(
         'trim',
