@@ -15,6 +15,7 @@ class Comprobacion extends Model
         'fecha_salida'       => 'date',
         'fecha_regreso'      => 'date',
         'fecha_dispersacion' => 'date',
+        'desglose'           => 'array',
         'dias'               => 'integer',
         'noches'             => 'integer',
         'monto_anticipo'     => 'decimal:2',

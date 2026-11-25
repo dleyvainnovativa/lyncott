@@ -36,11 +36,10 @@ return [
 
     // workflowId / stationId are the two UUID segments of the submit URL.
     'workflow' => [
-        // Comprobación: field IDs updated to the new form (17-33), but Smartker
-        // has NOT sent the new workflow/station UUIDs yet — these are placeholders.
+        // Comprobación form UUIDs confirmed by Smartker (2026-11-25).
         'comprobacion' => [
-            'id'      => env('SMARTKER_COMP_WORKFLOW_ID', '940ed339-ad2d-4ec5-9fa5-3ef88791ec72'),
-            'station' => env('SMARTKER_COMP_STATION_ID', 'fc5dc943-8a6a-4e7a-9e7e-9b8dd20f4ff1'),
+            'id'      => env('SMARTKER_COMP_WORKFLOW_ID', '4f18a411-eca9-4ef7-b30b-4daf50e8da74'),
+            'station' => env('SMARTKER_COMP_STATION_ID', '4bb8275d-1085-4133-8051-85efffde65f8'),
         ],
         // Anticipo form UUIDs confirmed by Smartker (2026-11-24).
         'anticipo' => [
@@ -103,6 +102,12 @@ return [
             'referencia'      => 14,
             'tarjeta'         => 15,
             'folio_anticipo'  => 16,
+            // Desglose + dispersación — new Smartker fields (2026-11-25).
+            'desglose_alimentos' => 43,
+            'desglose_pasajes'   => 44,
+            'desglose_peajes'    => 45,
+            'desglose_otros'     => 46,   // suma de las líneas "otros"
+            'fecha_dispersacion' => 47,
         ],
     ],
 

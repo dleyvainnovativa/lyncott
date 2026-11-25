@@ -69,6 +69,23 @@ class SmartkerPayloadBuilder
     /** Logical name => value, for both flows. */
     private static function values(Comprobacion $c, string $flujo): array
     {
+        // Anticipo breakdown (desglose). "Otros" is a repeater in the UI but a single
+        // Smartker field (46): send the sum, and fold the line descriptions into observaciones.
+        $d = (array) ($c->desglose ?? []);
+        $otrosSum = 0.0;
+        $otrosDesc = [];
+        foreach ((array) ($d['otros'] ?? []) as $o) {
+            $m = (float) ($o['monto'] ?? 0);
+            if ($m <= 0) continue;
+            $otrosSum += $m;
+            $desc = trim((string) ($o['descripcion'] ?? ''));
+            $otrosDesc[] = ($desc !== '' ? $desc : 'Otros') . ': $' . number_format($m, 2);
+        }
+        $observaciones = $c->observaciones;
+        if ($flujo === 'anticipo' && $otrosDesc) {
+            $observaciones = trim(($observaciones ? $observaciones . ' | ' : '') . 'Otros — ' . implode('; ', $otrosDesc));
+        }
+
         return [
             'numero_empleado' => $c->numero_empleado,
             'nombre_empleado' => $c->nombre_empleado,
@@ -76,7 +93,7 @@ class SmartkerPayloadBuilder
             'hasta'           => $c->fecha_regreso?->toDateString() ?? '',
             'folio_anticipo'  => $c->folio_anticipo,
             'tipo_gasto'      => $c->tipo_gasto,
-            'observaciones'   => $c->observaciones,
+            'observaciones'   => $observaciones,
             'departamento'    => $c->departamento,
             'centro_costos'   => $c->centro_costos,
             'clabe'           => $c->clabe,
@@ -87,6 +104,12 @@ class SmartkerPayloadBuilder
             'referencia'      => $c->referencia,
             'tarjeta'         => trim((string) ($c->tarjeta_nombre ?? '')
                 . (($c->tarjeta_numero ?? '') ? ' · ' . $c->tarjeta_numero : '')),
+            // Desglose del anticipo (Smartker 43-47).
+            'desglose_alimentos' => self::num($d['alimentos'] ?? 0),
+            'desglose_pasajes'   => self::num($d['pasajes'] ?? 0),
+            'desglose_peajes'    => self::num($d['peajes'] ?? 0),
+            'desglose_otros'     => self::num($otrosSum),
+            'fecha_dispersacion' => $c->fecha_dispersacion?->toDateString() ?? '',
         ];
     }
 

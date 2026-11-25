@@ -317,6 +317,7 @@ class ComprobacionController extends Controller
             'moneda'             => $flujo === 'anticipo' ? 'MXN' : (($viaje['moneda'] ?? '') ?: 'MXN'),
             'referencia'         => $flujo === 'anticipo' ? null : ($viaje['referencia'] ?? null),
             'fecha_dispersacion' => $viaje['fecha_dispersacion'] ?? null,
+            'desglose'           => $flujo === 'anticipo' ? $desglose : null,
             'total_con_factura'  => $totCf,
             'total_sin_factura'  => $totSf,
             'iva_total'          => $iva,
